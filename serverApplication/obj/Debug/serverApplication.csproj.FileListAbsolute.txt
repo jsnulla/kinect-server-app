@@ -1,0 +1,12 @@
+c:\users\htech\documents\visual studio 2013\Projects\serverApplication\serverApplication\bin\Debug\serverApplication.exe.config
+c:\users\htech\documents\visual studio 2013\Projects\serverApplication\serverApplication\bin\Debug\serverApplication.exe
+c:\users\htech\documents\visual studio 2013\Projects\serverApplication\serverApplication\bin\Debug\serverApplication.pdb
+c:\users\htech\documents\visual studio 2013\Projects\serverApplication\serverApplication\obj\Debug\serverApplication.exe
+c:\users\htech\documents\visual studio 2013\Projects\serverApplication\serverApplication\obj\Debug\serverApplication.pdb
+C:\Users\HTech\documents\visual studio 2013\Projects\serverApplication\serverApplication\obj\Debug\serverApplication.csprojResolveAssemblyReference.cache
+C:\Users\Jason\Documents\Server Client Code\serverApplication\serverApplication\bin\Debug\serverApplication.exe.config
+C:\Users\Jason\Documents\Server Client Code\serverApplication\serverApplication\obj\Debug\serverApplication.exe
+C:\Users\Jason\Documents\Server Client Code\serverApplication\serverApplication\obj\Debug\serverApplication.pdb
+C:\Users\Jason\Documents\Server Client Code\serverApplication\serverApplication\bin\Debug\serverApplication.exe
+C:\Users\Jason\Documents\Server Client Code\serverApplication\serverApplication\bin\Debug\serverApplication.pdb
+C:\Users\Jason\Documents\Server Client Code\serverApplication\serverApplication\obj\Debug\serverApplication.csprojResolveAssemblyReference.cache
