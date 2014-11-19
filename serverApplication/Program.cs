@@ -149,10 +149,10 @@ namespace serverApplication
 
             public static void StartApps()
             {
+                logMsg("Starting apps...");
                 proc[1] = Process.Start(@"" + configPaths[0]); // Start CMS
                 proc[2] = Process.Start(@"" + configPaths[3]); // Start Zone
                 appsStarted = true;
-                logMsg("Starting apps...");
             }
 
             public static void StartListening()
@@ -161,7 +161,7 @@ namespace serverApplication
                 while (readConfig() == false) {
                     // Keep reading config file
                 }
-                //AsyncSocketListener.StartApps();
+                AsyncSocketListener.StartApps();
 
                 // Data buffer for incoming data
                 byte[] bytes = new Byte[1024];
@@ -219,7 +219,15 @@ namespace serverApplication
                 Socket handler = state.workSocket;
 
                 // Read data from the client socket
-                int bytesRead = handler.EndReceive(asyncResult);
+                int bytesRead = 0;
+                try
+                {
+                    bytesRead = handler.EndReceive(asyncResult);
+                }
+                catch (Exception e)
+                {
+                    logMsg("Connection was forcibly closed");
+                }
 
                 if (bytesRead > 0)
                 {
@@ -254,18 +262,24 @@ namespace serverApplication
                         case "showCMS":
                             switchApp(configPaths[1], configPaths[2], false);
                             switchApp(configPaths[4], configPaths[5], true);
-                            ShowWindow(FindWindow(configPaths[1], configPaths[2]), ShowWindowCommand.SW_HIDE);
-                            ShowWindow(FindWindow(configPaths[4], configPaths[5]), ShowWindowCommand.SW_SHOW);
-                            ShowWindow(FindWindow(configPaths[7], configPaths[8]), ShowWindowCommand.SW_HIDE); // Hide splash
+                            //ShowWindow(FindWindow(configPaths[1], configPaths[2]), ShowWindowCommand.SW_SHOW);
+                            //ShowWindow(FindWindow(configPaths[4], configPaths[5]), ShowWindowCommand.SW_HIDE);
+                            //ShowWindow(FindWindow(configPaths[7], configPaths[8]), ShowWindowCommand.SW_HIDE); // Hide splash
+                            ShowWindow(FindWindow(configPaths[1], configPaths[2]), ShowWindowCommand.SW_MAXIMIZE);
+                            ShowWindow(FindWindow(configPaths[4], configPaths[5]), ShowWindowCommand.SW_FORCEMINIMIZE);
+                            //ShowWindow(FindWindow(configPaths[7], configPaths[8]), ShowWindowCommand.SW_HIDE); // Hide splash
                             logMsg("showing CMS");
                             break;
 
                         case "showZone":
                             switchApp(configPaths[1], configPaths[2], true);
                             switchApp(configPaths[4], configPaths[5], false);
-                            ShowWindow(FindWindow(configPaths[1], configPaths[2]), ShowWindowCommand.SW_HIDE);
-                            ShowWindow(FindWindow(configPaths[4], configPaths[5]), ShowWindowCommand.SW_SHOW);
-                            ShowWindow(FindWindow(configPaths[7], configPaths[8]), ShowWindowCommand.SW_HIDE); // Hide splash
+                            //ShowWindow(FindWindow(configPaths[1], configPaths[2]), ShowWindowCommand.SW_HIDE);
+                            //ShowWindow(FindWindow(configPaths[4], configPaths[5]), ShowWindowCommand.SW_SHOW);
+                            //ShowWindow(FindWindow(configPaths[7], configPaths[8]), ShowWindowCommand.SW_HIDE); // Hide splash
+                            ShowWindow(FindWindow(configPaths[1], configPaths[2]), ShowWindowCommand.SW_FORCEMINIMIZE);
+                            ShowWindow(FindWindow(configPaths[4], configPaths[5]), ShowWindowCommand.SW_MAXIMIZE);
+                            //ShowWindow(FindWindow(configPaths[7], configPaths[8]), ShowWindowCommand.SW_HIDE); // Hide splash
                             logMsg("showing ZONE");
                             break;
 
