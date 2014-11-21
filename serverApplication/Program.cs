@@ -17,13 +17,24 @@ namespace serverApplication
     {
         private static string[] configPaths = new string[9];
         public static uint pID;
+        const short CMS = 1;
+        const short ZONE = 2;
+
+        // Set Window Position
+        [DllImport("user32.dll", EntryPoint = "SetWindowPos")]
+        public static extern IntPtr SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
+        // Window Position Flags
+        const short SWP_NOMOVE = 0X2;
+        const short SWP_NOSIZE = 1;
+        const short SWP_NOZORDER = 0X4;
+        const int SWP_SHOWWINDOW = 0x0040;
 
         // sound
         [DllImport("user32.dll")]
-        public static extern IntPtr FindWindow(string strClassName, string strWindowName);
+        static extern IntPtr FindWindow(string strClassName, string strWindowName);
 
         [DllImport("user32.dll", SetLastError = true)]
-        public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+        static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
         //
 
         [DllImport("user32.dll", SetLastError = true)]
@@ -75,6 +86,7 @@ namespace serverApplication
         {
             public static ManualResetEvent allDone = new ManualResetEvent(false);
             public static Process[] proc = new Process[3];
+            public static StateObject state;
             public static bool splashShown = false;
             public static bool appsStarted = false;
 
@@ -150,9 +162,15 @@ namespace serverApplication
             public static void StartApps()
             {
                 logMsg("Starting apps...");
-                proc[1] = Process.Start(@"" + configPaths[0]); // Start CMS
-                proc[2] = Process.Start(@"" + configPaths[3]); // Start Zone
+                proc[ZONE] = Process.Start(@"" + configPaths[3]); // Start Zone
                 appsStarted = true;
+            }
+
+            public static void KillApps()
+            {
+                proc[CMS].CloseMainWindow(); // Kill CMS
+                proc[ZONE].CloseMainWindow(); // Kill Zone
+                appsStarted = false;
             }
 
             public static void StartListening()
@@ -204,7 +222,7 @@ namespace serverApplication
                 Socket handler = listener.EndAccept(asyncResult);
 
                 // Create the state object
-                StateObject state = new StateObject();
+                state = new StateObject();
                 state.workSocket = handler;
                 handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
             }
@@ -226,6 +244,7 @@ namespace serverApplication
                 }
                 catch (Exception e)
                 {
+                    logMsg(e.ToString());
                     logMsg("Connection was forcibly closed");
                 }
 
@@ -240,8 +259,7 @@ namespace serverApplication
                     switch (content)
                     {
                         case "showSplash":
-                            // Show splash screen because a player is detected
-                            if (splashShown == false)
+                            if (splashShown == false) // Show splash screen because a player is detected
                             {
                                 logMsg("starting splash screen");
                                 splashShown = true;
@@ -249,37 +267,41 @@ namespace serverApplication
                             }
                             break;
 
-                        case "hideSplash":
-                            // Hide splash screen since player is not detected or the player quit
-                            if (splashShown == true)
+                        case "killSplash":
+                            if (splashShown == true) // Kill splash screen since player is not detected or the player quit
                             {
                                 logMsg("killing splash screen");
                                 proc[0].CloseMainWindow();
-                                splashShown = false;
                             }
+                            splashShown = false;
+                            break;
+
+                        case "startCMS":
+                            if(proc[CMS] == null)
+                                proc[CMS] = Process.Start(@"" + configPaths[0]); // Start CMS
+                            break;
+
+                        case "muteCMS":
+                            muteApp(CMS, true); // Mute CMS
                             break;
 
                         case "showCMS":
-                            switchApp(configPaths[1], configPaths[2], false);
-                            switchApp(configPaths[4], configPaths[5], true);
-                            //ShowWindow(FindWindow(configPaths[1], configPaths[2]), ShowWindowCommand.SW_SHOW);
-                            //ShowWindow(FindWindow(configPaths[4], configPaths[5]), ShowWindowCommand.SW_HIDE);
-                            //ShowWindow(FindWindow(configPaths[7], configPaths[8]), ShowWindowCommand.SW_HIDE); // Hide splash
-                            ShowWindow(FindWindow(configPaths[1], configPaths[2]), ShowWindowCommand.SW_MAXIMIZE);
-                            ShowWindow(FindWindow(configPaths[4], configPaths[5]), ShowWindowCommand.SW_FORCEMINIMIZE);
-                            //ShowWindow(FindWindow(configPaths[7], configPaths[8]), ShowWindowCommand.SW_HIDE); // Hide splash
+                            muteApp(CMS, false);
+                            muteApp(ZONE, true);
+                            showApp(CMS);
+                            //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_SHOW);
+                            //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_MAXIMIZE);
+                            //ShowWindow(FindWindow(configPaths[4], null), ShowWindowCommand.SW_FORCEMINIMIZE);
                             logMsg("showing CMS");
                             break;
 
                         case "showZone":
-                            switchApp(configPaths[1], configPaths[2], true);
-                            switchApp(configPaths[4], configPaths[5], false);
-                            //ShowWindow(FindWindow(configPaths[1], configPaths[2]), ShowWindowCommand.SW_HIDE);
-                            //ShowWindow(FindWindow(configPaths[4], configPaths[5]), ShowWindowCommand.SW_SHOW);
-                            //ShowWindow(FindWindow(configPaths[7], configPaths[8]), ShowWindowCommand.SW_HIDE); // Hide splash
-                            ShowWindow(FindWindow(configPaths[1], configPaths[2]), ShowWindowCommand.SW_FORCEMINIMIZE);
-                            ShowWindow(FindWindow(configPaths[4], configPaths[5]), ShowWindowCommand.SW_MAXIMIZE);
-                            //ShowWindow(FindWindow(configPaths[7], configPaths[8]), ShowWindowCommand.SW_HIDE); // Hide splash
+                            muteApp(CMS, true);
+                            muteApp(ZONE, false);
+                            showApp(ZONE);
+                            //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_FORCEMINIMIZE);
+                            //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_HIDE);
+                            //ShowWindow(FindWindow(configPaths[4], null), ShowWindowCommand.SW_MAXIMIZE);
                             logMsg("showing ZONE");
                             break;
 
@@ -293,14 +315,12 @@ namespace serverApplication
                         case "killApps": // Unity test
                             if (appsStarted == true)
                             {
-                                proc[1].CloseMainWindow(); // Start CMS
-                                proc[2].CloseMainWindow(); // Start Zone
-                                appsStarted = false;
+                                AsyncSocketListener.KillApps();
                             }
                             break;
 
-                        case "write":
-                            logMsg("receiving data");
+                        default:
+                            logMsg(content);
                             break;
                     }
                     handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
@@ -314,6 +334,8 @@ namespace serverApplication
 
                 // Begin sending the data the remote device
                 handler.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendCallback), handler);
+                handler.Shutdown(SocketShutdown.Both);
+                handler.Close();
             }
 
             public static void SendCallback(IAsyncResult asyncResult)
@@ -335,8 +357,23 @@ namespace serverApplication
                 }
             }
 
-            public static void switchApp(string appClass, string appDisplayName, bool muteApp)
+            public static void muteApp(int procNum, bool _muteApp)
             {
+                string appClass = null; // Process Class Name
+                string appDisplayName = null; // Process Display Name
+                switch (procNum)
+                {
+                    case CMS:
+                        appClass = configPaths[1];
+                        appDisplayName = null;
+                        break;
+
+                    case ZONE:
+                        appClass = configPaths[4];
+                        appDisplayName = null;
+                        break;
+                }
+
                 var hWnd = FindWindow(appClass, appDisplayName);
                 if (hWnd == IntPtr.Zero)
                     return;
@@ -344,12 +381,56 @@ namespace serverApplication
                 GetWindowThreadProcessId(hWnd, out pID);
                 if (pID == 0)
                     return;
-                VolumeMixer.SetApplicationMute(pID, muteApp);
+                VolumeMixer.SetApplicationMute(pID, _muteApp);
+            }
+
+            public static void showApp(int procNum)
+            {
+                IntPtr handle; // Create a handle to manipulate the windows
+                try
+                {
+                    handle = proc[procNum].MainWindowHandle;
+                    if (handle != IntPtr.Zero)
+                        SetWindowPos(handle, 0, 0, 0, Screen.PrimaryScreen.WorkingArea.Width,
+                            Screen.PrimaryScreen.WorkingArea.Height, SWP_NOZORDER | SWP_SHOWWINDOW);
+
+                    switch (procNum)
+                    {
+                        case CMS:
+                            handle = proc[ZONE].MainWindowHandle;
+                            ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_MAXIMIZE); // Maximize CMS
+                            break;
+
+                        case ZONE:
+                            handle = proc[CMS].MainWindowHandle;
+                            ShowWindow(FindWindow(configPaths[4], null), ShowWindowCommand.SW_MAXIMIZE); // Maximize Zone
+                            break;
+                    }
+
+                    if (handle != IntPtr.Zero)
+                        SetWindowPos(handle, 1, 0, 0, 0, 0, SWP_NOSIZE);
+                }
+                catch(Exception e)
+                {
+                    logMsg(e.ToString());
+                }
+                
+
+                //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_MAXIMIZE);
+                //ShowWindow(FindWindow(configPaths[4], null), ShowWindowCommand.SW_FORCEMINIMIZE);
+            }
+
+            static void OnProcessExit(object sender, EventArgs e)
+            {
+                logMsg("Closing sockets..");
+                state.workSocket.Shutdown(SocketShutdown.Both);
+                state.workSocket.Close();
             }
 
             public static int Main(string[] args)
             {
                 // Program Start
+                AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
                 AsyncSocketListener.StartListening(); // Start Aynchronous Listener
                 return 0;
             }
