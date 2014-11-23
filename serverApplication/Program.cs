@@ -22,12 +22,32 @@ namespace serverApplication
 
         // Set Window Position
         [DllImport("user32.dll", EntryPoint = "SetWindowPos")]
-        public static extern IntPtr SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
+        public static extern IntPtr SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
+
+        // Window Z Order
+        const int
+        HWND_TOP = 0,
+        HWND_BOTTOM = 1,
+        HWND_TOPMOST = -1,
+        HWND_NOTTOPMOST = -2;
+
         // Window Position Flags
-        const short SWP_NOMOVE = 0X2;
-        const short SWP_NOSIZE = 1;
-        const short SWP_NOZORDER = 0X4;
-        const int SWP_SHOWWINDOW = 0x0040;
+        const int
+        SWP_NOSIZE = 0x0001,
+        SWP_NOMOVE = 0x0002,
+        SWP_NOZORDER = 0x0004,
+        SWP_NOREDRAW = 0x0008,
+        SWP_NOACTIVATE = 0x0010,
+        SWP_DRAWFRAME = 0x0020,
+        SWP_FRAMECHANGED = 0x0020,
+        SWP_SHOWWINDOW = 0x0040,
+        SWP_HIDEWINDOW = 0x0080,
+        SWP_NOCOPYBITS = 0x0100,
+        SWP_NOOWNERZORDER = 0x0200,
+        SWP_NOREPOSITION = 0x0200,
+        SWP_NOSENDCHANGING = 0x0400,
+        SWP_DEFERERASE = 0x2000,
+        SWP_ASYNCWINDOWPOS = 0x4000;
 
         // sound
         [DllImport("user32.dll")]
@@ -391,24 +411,24 @@ namespace serverApplication
                 {
                     handle = proc[procNum].MainWindowHandle;
                     if (handle != IntPtr.Zero)
-                        SetWindowPos(handle, 0, 0, 0, Screen.PrimaryScreen.WorkingArea.Width,
-                            Screen.PrimaryScreen.WorkingArea.Height, SWP_NOZORDER | SWP_SHOWWINDOW);
+                        SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, Screen.PrimaryScreen.WorkingArea.Width,
+                            Screen.PrimaryScreen.WorkingArea.Height, SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW); // No resize, don't move
 
                     switch (procNum)
                     {
                         case CMS:
                             handle = proc[ZONE].MainWindowHandle;
-                            ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_MAXIMIZE); // Maximize CMS
+                            //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_MAXIMIZE); // Maximize CMS
                             break;
 
                         case ZONE:
                             handle = proc[CMS].MainWindowHandle;
-                            ShowWindow(FindWindow(configPaths[4], null), ShowWindowCommand.SW_MAXIMIZE); // Maximize Zone
+                            //ShowWindow(FindWindow(configPaths[4], null), ShowWindowCommand.SW_MAXIMIZE); // Maximize Zone
                             break;
                     }
 
                     if (handle != IntPtr.Zero)
-                        SetWindowPos(handle, 1, 0, 0, 0, 0, SWP_NOSIZE);
+                        SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
                 }
                 catch(Exception e)
                 {

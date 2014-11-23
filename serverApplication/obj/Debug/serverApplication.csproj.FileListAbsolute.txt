@@ -16,3 +16,6 @@ C:\Users\HTech\Documents\kinect-app-controller\serverApplication\obj\Debug\serve
 C:\Users\HTech\Documents\kinect-app-controller\serverApplication\bin\Debug\serverApplication.exe
 C:\Users\HTech\Documents\kinect-app-controller\serverApplication\bin\Debug\serverApplication.pdb
 C:\Users\HTech\Documents\kinect-app-controller\serverApplication\obj\Debug\serverApplication.csprojResolveAssemblyReference.cache
+C:\Users\Jason\Documents\kinect-app-controller\serverApplication\bin\Debug\serverApplication.exe.config
+C:\Users\Jason\Documents\kinect-app-controller\serverApplication\obj\Debug\serverApplication.exe
+C:\Users\Jason\Documents\kinect-app-controller\serverApplication\obj\Debug\serverApplication.pdb
