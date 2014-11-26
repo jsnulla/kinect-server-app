@@ -9,6 +9,7 @@ using System.Threading;
 using System.Net.Sockets;
 using System.Diagnostics;
 using System.Windows.Forms;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 
 namespace serverApplication
@@ -17,6 +18,8 @@ namespace serverApplication
     {
         private static string[] configPaths = new string[9];
         public static uint pID;
+        private static splash_screen splash = new splash_screen();
+
         const short CMS = 1;
         const short ZONE = 2;
 
@@ -48,6 +51,28 @@ namespace serverApplication
         SWP_NOSENDCHANGING = 0x0400,
         SWP_DEFERERASE = 0x2000,
         SWP_ASYNCWINDOWPOS = 0x4000;
+
+        [DllImport("kernel32.dll")]
+        static extern IntPtr OpenThread(int dwDesiredAccess, bool bInheritHandle, uint dwThreadId);
+        [DllImport("kernel32.dll")]
+        static extern uint SuspendThread(IntPtr hThread);
+        [DllImport("kernel32.dll")]
+        static extern int ResumeThread(IntPtr hThread);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool CloseHandle(IntPtr hObject);
+
+        // Thread Acess
+        const int
+        THREAD_TERMINATE = (0x0001),
+        THREAD_SUSPEND_RESUME = (0x0002),
+        THREAD_GET_CONTEXT = (0x0008),
+        THREAD_SET_CONTEXT = (0x0010),
+        THREAD_SET_INFORMATION = (0x0020),
+        THREAD_QUERY_INFORMATION = (0x0040),
+        THREAD_SET_THREAD_TOKEN = (0x0080),
+        THREAD_IMPERSONATE = (0x0100),
+        THREAD_DIRECT_IMPERSONATION = (0x0200);
 
         // sound
         [DllImport("user32.dll")]
@@ -88,6 +113,12 @@ namespace serverApplication
             SW_SHOWDEFAULT = 10,
             SW_FORCEMINIMIZE = 11,
             SW_MAX = 11,
+        }
+
+        public static class CMS_Obj
+        {
+            public static bool Started { get; set; }
+            public static bool Suspended { get; set; }
         }
 
         public class StateObject
@@ -139,15 +170,15 @@ namespace serverApplication
                         using (StreamWriter sw = File.CreateText(configPath))
                         {
                             logMsg("creating config");
-                            sw.WriteLine("CMS path here");
-                            sw.WriteLine("CMS class name here");
-                            sw.WriteLine("CMS display name here");
-                            sw.WriteLine("Zone path here");
-                            sw.WriteLine("Zone class name here (UnityWndClass)");
-                            sw.WriteLine("Zone display name here");
-                            sw.WriteLine("Splash path here");
-                            sw.WriteLine("Splash class name here (UnityWndClass)");
-                            sw.WriteLine("Splash display name here");
+                            sw.WriteLine("CMS EXE path");
+                            sw.WriteLine("CMS class name");
+                            sw.WriteLine("CMS display name");
+                            sw.WriteLine("Zone EXE here");
+                            sw.WriteLine("Zone class name (UnityWndClass)");
+                            sw.WriteLine("Zone display name");
+                            sw.WriteLine("Splash EXE");
+                            sw.WriteLine("Splash class name");
+                            sw.WriteLine("Splash display name");
                         }
                         logMsg("config created");
                         readConfig();
@@ -182,7 +213,8 @@ namespace serverApplication
             public static void StartApps()
             {
                 logMsg("Starting apps...");
-                proc[ZONE] = Process.Start(@"" + configPaths[3]); // Start Zone
+                //proc[ZONE] = Process.Start(@"" + configPaths[3]); // Start Zone
+                //splash.ShowDialog(); // Start Splash
                 appsStarted = true;
             }
 
@@ -282,23 +314,32 @@ namespace serverApplication
                             if (splashShown == false) // Show splash screen because a player is detected
                             {
                                 logMsg("starting splash screen");
-                                splashShown = true;
-                                proc[0] = Process.Start(@"" + configPaths[6]); // Start splash screen
+                                splash.ShowSplash();
                             }
                             break;
 
                         case "killSplash":
                             if (splashShown == true) // Kill splash screen since player is not detected or the player quit
                             {
-                                logMsg("killing splash screen");
-                                proc[0].CloseMainWindow();
+                                logMsg("hiding splash screen");
+                                splash.HideSplash();
                             }
-                            splashShown = false;
                             break;
 
                         case "startCMS":
-                            if(proc[CMS] == null)
-                                proc[CMS] = Process.Start(@"" + configPaths[0]); // Start CMS
+                            if (proc[CMS] == null || CMS_Obj.Started == false)
+                            {
+                                try
+                                {
+                                    proc[CMS] = Process.Start(@"" + configPaths[0]); // Start CMS
+                                    CMS_Obj.Started = true;
+                                }
+                                catch (Exception e)
+                                {
+                                    CMS_Obj.Started = false;
+                                    logMsg(e.ToString());
+                                }
+                            }
                             break;
 
                         case "muteCMS":
@@ -306,12 +347,10 @@ namespace serverApplication
                             break;
 
                         case "showCMS":
+                            CMS_Obj.Suspended = ProcessSuspend.ResumeCMS(proc[CMS]);
                             muteApp(CMS, false);
                             muteApp(ZONE, true);
                             showApp(CMS);
-                            //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_SHOW);
-                            //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_MAXIMIZE);
-                            //ShowWindow(FindWindow(configPaths[4], null), ShowWindowCommand.SW_FORCEMINIMIZE);
                             logMsg("showing CMS");
                             break;
 
@@ -319,9 +358,7 @@ namespace serverApplication
                             muteApp(CMS, true);
                             muteApp(ZONE, false);
                             showApp(ZONE);
-                            //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_FORCEMINIMIZE);
-                            //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_HIDE);
-                            //ShowWindow(FindWindow(configPaths[4], null), ShowWindowCommand.SW_MAXIMIZE);
+                            CMS_Obj.Suspended = ProcessSuspend.SuspendCMS(proc[CMS]);
                             logMsg("showing ZONE");
                             break;
 
@@ -406,45 +443,45 @@ namespace serverApplication
 
             public static void showApp(int procNum)
             {
-                IntPtr handle; // Create a handle to manipulate the windows
+                IntPtr handle = IntPtr.Zero; // Create a handle to manipulate the windows
                 try
                 {
-                    handle = proc[procNum].MainWindowHandle;
-                    if (handle != IntPtr.Zero)
-                        SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, Screen.PrimaryScreen.WorkingArea.Width,
-                            Screen.PrimaryScreen.WorkingArea.Height, SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW); // No resize, don't move
+                    //SetWindowPos(handle, (IntPtr)HWND_TOP, 0, 0, Screen.PrimaryScreen.WorkingArea.Width,
+                        //Screen.PrimaryScreen.WorkingArea.Height, SWP_NOMOVE);
+                    // Don't resize, don't move
 
                     switch (procNum)
                     {
                         case CMS:
+                            handle = proc[procNum].MainWindowHandle;
+                            // Show CMS window
+                            SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+                            ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
+
                             handle = proc[ZONE].MainWindowHandle;
+                            SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                             //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_MAXIMIZE); // Maximize CMS
                             break;
 
                         case ZONE:
+                            handle = proc[procNum].MainWindowHandle;
+                            SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                            ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
+
                             handle = proc[CMS].MainWindowHandle;
-                            //ShowWindow(FindWindow(configPaths[4], null), ShowWindowCommand.SW_MAXIMIZE); // Maximize Zone
+                            // Hide CMS window
+                            SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_HIDEWINDOW);
+                            //SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
                             break;
                     }
 
-                    if (handle != IntPtr.Zero)
-                        SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+                    SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+                    // Don't resize, don't move, don't focus
                 }
                 catch(Exception e)
                 {
                     logMsg(e.ToString());
                 }
-                
-
-                //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_MAXIMIZE);
-                //ShowWindow(FindWindow(configPaths[4], null), ShowWindowCommand.SW_FORCEMINIMIZE);
-            }
-
-            static void OnProcessExit(object sender, EventArgs e)
-            {
-                logMsg("Closing sockets..");
-                state.workSocket.Shutdown(SocketShutdown.Both);
-                state.workSocket.Close();
             }
 
             public static int Main(string[] args)
@@ -453,6 +490,139 @@ namespace serverApplication
                 AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
                 AsyncSocketListener.StartListening(); // Start Aynchronous Listener
                 return 0;
+            }
+
+            static void OnProcessExit(object sender, EventArgs e)
+            {
+                logMsg("Closing sockets..");
+                state.workSocket.Shutdown(SocketShutdown.Both);
+                state.workSocket.Close();
+                muteApp(CMS, false);
+            }
+        }
+
+        public class ProcessSuspend
+        {
+            [DllImport("kernel32.dll")]
+            static extern uint GetLastError();
+
+            public ProcessSuspend()
+            {
+
+            }
+
+            public static bool SuspendCMS(Process proc)
+            {
+                if (!CMS_Obj.Suspended)
+                {
+                    try
+                    {
+                        Suspend(proc);
+                        return true;
+                    }
+                    catch(Exception e)
+                    {
+                        Console.WriteLine(e.ToString());
+                    }
+                }
+                return false;
+            }
+
+            public static bool ResumeCMS(Process proc)
+            {
+                if (CMS_Obj.Suspended)
+                {
+                    try
+                    {
+                        Resume(proc);
+                        return true;
+                    }
+                    catch(Exception e)
+                    {
+                        Console.WriteLine(e.ToString());
+                    }
+                }
+                return false;
+            }
+
+            public static void SuspendProcess(Process proc)
+            {
+                if (proc.ProcessName == string.Empty)
+                    return;
+
+                foreach (ProcessThread pT in proc.Threads)
+                {
+                    IntPtr pOpenThread = OpenThread(THREAD_SUSPEND_RESUME, false, (uint)pT.Id);
+                    if (pOpenThread == IntPtr.Zero)
+                    {
+                        continue;
+                    }
+                    SuspendThread(pOpenThread);
+                    CloseHandle(pOpenThread);
+                }
+            }
+
+            public static void ResumeProcess(Process proc)
+            {
+                if (proc.ProcessName == string.Empty)
+                    return;
+
+                foreach (ProcessThread pT in proc.Threads)
+                {
+                    IntPtr pOpenThread = OpenThread(THREAD_SUSPEND_RESUME, false, (uint)pT.Id);
+
+                    if (pOpenThread == IntPtr.Zero)
+                    {
+                        continue;
+                    }
+
+                    var suspendCount = 0;
+                    do
+                    {
+                        suspendCount = ResumeThread(pOpenThread);
+                    } while (suspendCount > 0);
+                    CloseHandle(pOpenThread);
+                }
+            }
+
+            public static void Suspend(Process process)
+            {
+                foreach (ProcessThread thread in process.Threads)
+                {
+                    var pOpenThread = OpenThread(THREAD_SUSPEND_RESUME, false, (uint)thread.Id);
+                    if (pOpenThread == IntPtr.Zero)
+                    {
+                        break;
+                    }
+                    SuspendThread(pOpenThread);
+                    CloseHandle(pOpenThread);
+                }
+            }
+
+            public static void Resume(Process process)
+            {
+                foreach (ProcessThread thread in process.Threads)
+                {
+                    var pOpenThread = OpenThread(THREAD_SUSPEND_RESUME, false, (uint)thread.Id);
+                    if (pOpenThread == IntPtr.Zero)
+                    {
+                        break;
+                    }
+                    ResumeThread(pOpenThread);
+                    CloseHandle(pOpenThread);
+                }
+            }
+
+            public static string GetState(Process process)
+            {
+                string threadState = "";
+                foreach (ProcessThread thread in process.Threads)
+                {
+                    var pOpenThread = OpenThread(THREAD_SUSPEND_RESUME, false, (uint)thread.Id);
+                    threadState += pOpenThread.ToString();
+                    CloseHandle(pOpenThread);
+                }
+                return threadState;
             }
         }
 
