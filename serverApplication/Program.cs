@@ -18,8 +18,8 @@ namespace serverApplication
     {
         private static string[] configPaths = new string[9];
         public static uint pID;
-        private static splash_screen splash = new splash_screen();
 
+        const short SPLASH = 0;
         const short CMS = 1;
         const short ZONE = 2;
 
@@ -213,8 +213,7 @@ namespace serverApplication
             public static void StartApps()
             {
                 logMsg("Starting apps...");
-                //proc[ZONE] = Process.Start(@"" + configPaths[3]); // Start Zone
-                //splash.ShowDialog(); // Start Splash
+                proc[ZONE] = Process.Start(@"" + configPaths[3]); // Start Zone
                 appsStarted = true;
             }
 
@@ -310,19 +309,35 @@ namespace serverApplication
 
                     switch (content)
                     {
-                        case "showSplash":
-                            if (splashShown == false) // Show splash screen because a player is detected
+                        case "playerDetected":
+                            while (splashShown == false) // Show splash screen because a player is detected
                             {
-                                logMsg("starting splash screen");
-                                splash.ShowSplash();
+                                try
+                                {
+                                    proc[SPLASH] = Process.Start(configPaths[6]);
+                                    splashShown = true;
+                                    logMsg("showing splash");
+                                }
+                                catch (Exception e)
+                                {
+                                    logMsg(e.ToString());
+                                }
                             }
                             break;
 
-                        case "killSplash":
-                            if (splashShown == true) // Kill splash screen since player is not detected or the player quit
+                        case "noPlayer":
+                            while (splashShown == true) // Kill splash screen since player is not detected or the player quit
                             {
-                                logMsg("hiding splash screen");
-                                splash.HideSplash();
+                                try
+                                {
+                                    proc[SPLASH].CloseMainWindow();
+                                    splashShown = false;
+                                    logMsg("killing splash");
+                                }
+                                catch (Exception e)
+                                {
+                                    logMsg(e.ToString());
+                                }
                             }
                             break;
 
