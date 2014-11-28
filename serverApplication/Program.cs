@@ -355,6 +355,7 @@ namespace serverApplication
                                     logMsg(e.ToString());
                                 }
                             }
+                            logMsg("starting cms");
                             break;
 
                         case "muteCMS":
