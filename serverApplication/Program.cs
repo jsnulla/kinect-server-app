@@ -363,7 +363,12 @@ namespace serverApplication
                             break;
 
                         case "showCMS":
-                            CMS_Obj.Suspended = ProcessSuspend.ResumeCMS(proc[CMS]);
+                            while (CMS_Obj.Suspended)
+                            {
+                                CMS_Obj.Suspended = ProcessSuspend.ResumeCMS(proc[CMS]);
+                                logMsg("CMS IS SUSPENDED: " + CMS_Obj.Suspended.ToString());
+                            }
+
                             muteApp(CMS, false);
                             muteApp(ZONE, true);
                             showApp(CMS);
@@ -374,8 +379,17 @@ namespace serverApplication
                             muteApp(CMS, true);
                             muteApp(ZONE, false);
                             showApp(ZONE);
-                            CMS_Obj.Suspended = ProcessSuspend.SuspendCMS(proc[CMS]);
+                            while (!CMS_Obj.Suspended)
+                            {
+                                CMS_Obj.Suspended = ProcessSuspend.SuspendCMS(proc[CMS]);
+                                logMsg("CMS IS SUSPENDED: " + CMS_Obj.Suspended.ToString());
+                            }
+
                             logMsg("showing ZONE");
+                            break;
+
+                        case "keepZoneOnTop":
+                            keepZoneOnTop();
                             break;
 
                         case "startApps": // Unity test
@@ -500,6 +514,21 @@ namespace serverApplication
                 }
             }
 
+            public static void keepZoneOnTop()
+            {
+                IntPtr handle = IntPtr.Zero; // Create a handle to manipulate the windows
+                try
+                {
+                    handle = proc[ZONE].MainWindowHandle;
+                    SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                    ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
+                }
+                catch (Exception e)
+                {
+                    logMsg(e.ToString());
+                }
+            }
+
             public static int Main(string[] args)
             {
                 // Program Start
@@ -533,8 +562,7 @@ namespace serverApplication
                 {
                     try
                     {
-                        Suspend(proc);
-                        return true;
+                        return Suspend(proc);
                     }
                     catch(Exception e)
                     {
@@ -550,8 +578,7 @@ namespace serverApplication
                 {
                     try
                     {
-                        Resume(proc);
-                        return true;
+                        return Resume(proc);
                     }
                     catch(Exception e)
                     {
@@ -561,84 +588,52 @@ namespace serverApplication
                 return false;
             }
 
-            public static void SuspendProcess(Process proc)
-            {
-                if (proc.ProcessName == string.Empty)
-                    return;
-
-                foreach (ProcessThread pT in proc.Threads)
-                {
-                    IntPtr pOpenThread = OpenThread(THREAD_SUSPEND_RESUME, false, (uint)pT.Id);
-                    if (pOpenThread == IntPtr.Zero)
-                    {
-                        continue;
-                    }
-                    SuspendThread(pOpenThread);
-                    CloseHandle(pOpenThread);
-                }
-            }
-
-            public static void ResumeProcess(Process proc)
-            {
-                if (proc.ProcessName == string.Empty)
-                    return;
-
-                foreach (ProcessThread pT in proc.Threads)
-                {
-                    IntPtr pOpenThread = OpenThread(THREAD_SUSPEND_RESUME, false, (uint)pT.Id);
-
-                    if (pOpenThread == IntPtr.Zero)
-                    {
-                        continue;
-                    }
-
-                    var suspendCount = 0;
-                    do
-                    {
-                        suspendCount = ResumeThread(pOpenThread);
-                    } while (suspendCount > 0);
-                    CloseHandle(pOpenThread);
-                }
-            }
-
-            public static void Suspend(Process process)
+            public static bool Suspend(Process process)
             {
                 foreach (ProcessThread thread in process.Threads)
                 {
                     var pOpenThread = OpenThread(THREAD_SUSPEND_RESUME, false, (uint)thread.Id);
-                    if (pOpenThread == IntPtr.Zero)
+                    //if (pOpenThread == IntPtr.Zero)
+                    //{
+                    //    break;
+                    //}
+                    try
                     {
-                        break;
+                        SuspendThread(pOpenThread);
+                        CloseHandle(pOpenThread);
                     }
-                    SuspendThread(pOpenThread);
-                    CloseHandle(pOpenThread);
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("FAILED");
+                        return false;
+                    }
                 }
+                return true;
             }
 
-            public static void Resume(Process process)
+            public static bool Resume(Process process)
             {
                 foreach (ProcessThread thread in process.Threads)
                 {
                     var pOpenThread = OpenThread(THREAD_SUSPEND_RESUME, false, (uint)thread.Id);
-                    if (pOpenThread == IntPtr.Zero)
+                    //if (pOpenThread == IntPtr.Zero)
+                    //{
+                    //    break;
+                    //}
+                    //ResumeThread(pOpenThread);
+                    //CloseHandle(pOpenThread);
+                    try
                     {
-                        break;
+                        ResumeThread(pOpenThread);
+                        CloseHandle(pOpenThread);
                     }
-                    ResumeThread(pOpenThread);
-                    CloseHandle(pOpenThread);
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("FAILED");
+                        return true;
+                    }
                 }
-            }
-
-            public static string GetState(Process process)
-            {
-                string threadState = "";
-                foreach (ProcessThread thread in process.Threads)
-                {
-                    var pOpenThread = OpenThread(THREAD_SUSPEND_RESUME, false, (uint)thread.Id);
-                    threadState += pOpenThread.ToString();
-                    CloseHandle(pOpenThread);
-                }
-                return threadState;
+                return false;
             }
         }
 
