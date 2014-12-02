@@ -197,7 +197,7 @@ namespace serverApplication
                                 lineNumber++;
                             }
                         }
-                        Console.Clear();
+                        //Console.Clear();
                         logMsg("config read");
                         return true;
                     }
@@ -310,7 +310,8 @@ namespace serverApplication
                     switch (content)
                     {
                         case "playerDetected":
-                            while (splashShown == false) // Show splash screen because a player is detected
+                            //if (!splashShown)
+                            while (!splashShown)
                             {
                                 try
                                 {
@@ -320,22 +321,25 @@ namespace serverApplication
                                 }
                                 catch (Exception e)
                                 {
+                                    splashShown = false;
                                     logMsg(e.ToString());
                                 }
                             }
                             break;
 
                         case "noPlayer":
-                            while (splashShown == true) // Kill splash screen since player is not detected or the player quit
+                            //if (splashShown == true) // Kill splash screen since player is not detected or the player quit
+                            while (splashShown)
                             {
                                 try
                                 {
-                                    proc[SPLASH].CloseMainWindow();
+                                    proc[SPLASH].Kill();
                                     splashShown = false;
                                     logMsg("killing splash");
                                 }
                                 catch (Exception e)
                                 {
+                                    splashShown = true;
                                     logMsg(e.ToString());
                                 }
                             }
@@ -388,8 +392,8 @@ namespace serverApplication
                             logMsg("showing ZONE");
                             break;
 
-                        case "keepZoneOnTop":
-                            keepZoneOnTop();
+                        case "topSplash":
+                            KeepSplashOnTop();
                             break;
 
                         case "startApps": // Unity test
@@ -485,7 +489,8 @@ namespace serverApplication
                         case CMS:
                             handle = proc[procNum].MainWindowHandle;
                             // Show CMS window
-                            SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+                            //SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+                            SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                             ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
 
                             handle = proc[ZONE].MainWindowHandle;
@@ -500,8 +505,8 @@ namespace serverApplication
 
                             handle = proc[CMS].MainWindowHandle;
                             // Hide CMS window
-                            SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_HIDEWINDOW);
-                            //SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+                            //SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_HIDEWINDOW);
+                            SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
                             break;
                     }
 
@@ -514,14 +519,14 @@ namespace serverApplication
                 }
             }
 
-            public static void keepZoneOnTop()
+            public static void KeepSplashOnTop()
             {
                 IntPtr handle = IntPtr.Zero; // Create a handle to manipulate the windows
                 try
                 {
-                    handle = proc[ZONE].MainWindowHandle;
+                    handle = proc[SPLASH].MainWindowHandle;
                     SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                    ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
+                    //ShowWindow(handle, ShowWindowCommand.SW_SHOW);
                 }
                 catch (Exception e)
                 {
