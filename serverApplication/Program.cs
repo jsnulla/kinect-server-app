@@ -213,8 +213,11 @@ namespace serverApplication
             public static void StartApps()
             {
                 logMsg("Starting apps...");
+
+                proc[CMS] = Process.Start(@"" + configPaths[0]); // Start CMS
                 proc[ZONE] = Process.Start(@"" + configPaths[3]); // Start Zone
                 appsStarted = true;
+                CMS_Obj.Started = true;
             }
 
             public static void KillApps()
@@ -477,46 +480,55 @@ namespace serverApplication
 
             public static void showApp(int procNum)
             {
+                //bool _isAppShown = false;
+
                 IntPtr handle = IntPtr.Zero; // Create a handle to manipulate the windows
-                try
-                {
-                    //SetWindowPos(handle, (IntPtr)HWND_TOP, 0, 0, Screen.PrimaryScreen.WorkingArea.Width,
-                        //Screen.PrimaryScreen.WorkingArea.Height, SWP_NOMOVE);
-                    // Don't resize, don't move
-
-                    switch (procNum)
+                //while (!_isAppShown)
+                //{
+                    try
                     {
-                        case CMS:
-                            handle = proc[procNum].MainWindowHandle;
-                            // Show CMS window
-                            //SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-                            SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                            ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
+                        //SetWindowPos(handle, (IntPtr)HWND_TOP, 0, 0, Screen.PrimaryScreen.WorkingArea.Width,
+                        //Screen.PrimaryScreen.WorkingArea.Height, SWP_NOMOVE);
+                        // Don't resize, don't move
 
-                            handle = proc[ZONE].MainWindowHandle;
-                            SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                            //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_MAXIMIZE); // Maximize CMS
-                            break;
+                        switch (procNum)
+                        {
+                            case CMS:
+                                handle = proc[procNum].MainWindowHandle;
+                                // Show CMS window
+                                //SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+                                SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                                ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
 
-                        case ZONE:
-                            handle = proc[procNum].MainWindowHandle;
-                            SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                            ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
+                                handle = proc[ZONE].MainWindowHandle;
+                                SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                                SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                                //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_MAXIMIZE); // Maximize CMS
+                                break;
 
-                            handle = proc[CMS].MainWindowHandle;
-                            // Hide CMS window
-                            //SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_HIDEWINDOW);
-                            SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
-                            break;
+                            case ZONE:
+                                handle = proc[procNum].MainWindowHandle;
+                                SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                                ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
+
+                                handle = proc[CMS].MainWindowHandle;
+                                // Hide CMS window
+                                //SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_HIDEWINDOW);
+                                SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                                SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+                                break;
+                        }
+
+                        SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+                        //_isAppShown = true;
+                        // Don't resize, don't move, don't focus
                     }
-
-                    SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
-                    // Don't resize, don't move, don't focus
-                }
-                catch(Exception e)
-                {
-                    logMsg(e.ToString());
-                }
+                    catch (Exception e)
+                    {
+                        //_isAppShown = false;
+                        logMsg(e.ToString());
+                    }
+                //}
             }
 
             public static void KeepSplashOnTop()
