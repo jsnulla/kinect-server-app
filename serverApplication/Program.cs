@@ -216,6 +216,10 @@ namespace serverApplication
 
                 proc[CMS] = Process.Start(@"" + configPaths[0]); // Start CMS
                 proc[ZONE] = Process.Start(@"" + configPaths[3]); // Start Zone
+
+                IntPtr handle = Process.GetCurrentProcess().MainWindowHandle;
+                ShowWindow(handle, ShowWindowCommand.SW_MINIMIZE);
+
                 appsStarted = true;
                 CMS_Obj.Started = true;
             }
@@ -476,6 +480,10 @@ namespace serverApplication
                 if (pID == 0)
                     return;
                 VolumeMixer.SetApplicationMute(pID, _muteApp);
+
+                // Check if app being muted is indeed muted; if not, retry
+                if (_muteApp && VolumeMixer.GetApplicationMute(pID) != true)
+                    muteApp(procNum, _muteApp);
             }
 
             public static void showApp(int procNum)
