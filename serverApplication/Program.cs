@@ -482,8 +482,9 @@ namespace serverApplication
                 VolumeMixer.SetApplicationMute(pID, _muteApp);
 
                 // Check if app being muted is indeed muted; if not, retry
-                if (_muteApp && VolumeMixer.GetApplicationMute(pID) != true)
-                    muteApp(procNum, _muteApp);
+                if (_muteApp && VolumeMixer.GetApplicationMute(pID) != null)
+                    if(VolumeMixer.GetApplicationMute(pID) != true)
+                        muteApp(procNum, _muteApp);
             }
 
             public static void showApp(int procNum)
