@@ -26,3 +26,11 @@ C:\Users\Jason\Documents\kinect-app-controller\serverApplication\obj\Debug\serve
 C:\Users\Jason\Documents\kinect-app-controller\serverApplication\obj\Debug\serverApplication.csproj.GenerateResource.Cache
 C:\Users\Jason\Documents\kinect-app-controller\serverApplication\obj\Debug\serverApplication.exe
 C:\Users\Jason\Documents\kinect-app-controller\serverApplication\obj\Debug\serverApplication.pdb
+C:\Users\Euguene\Documents\kinect-app-controller\serverApplication\bin\Debug\serverApplication.exe.config
+C:\Users\Euguene\Documents\kinect-app-controller\serverApplication\bin\Debug\serverApplication.exe
+C:\Users\Euguene\Documents\kinect-app-controller\serverApplication\bin\Debug\serverApplication.pdb
+C:\Users\Euguene\Documents\kinect-app-controller\serverApplication\obj\Debug\serverApplication.Properties.Resources.resources
+C:\Users\Euguene\Documents\kinect-app-controller\serverApplication\obj\Debug\serverApplication.csproj.GenerateResource.Cache
+C:\Users\Euguene\Documents\kinect-app-controller\serverApplication\obj\Debug\serverApplication.exe
+C:\Users\Euguene\Documents\kinect-app-controller\serverApplication\obj\Debug\serverApplication.pdb
+C:\Users\Euguene\Documents\kinect-app-controller\serverApplication\obj\Debug\serverApplication.csprojResolveAssemblyReference.cache

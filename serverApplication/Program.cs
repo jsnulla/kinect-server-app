@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Windows.Forms;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using System.Drawing;
 
 namespace serverApplication
 {
@@ -23,6 +24,8 @@ namespace serverApplication
         const short CMS = 1;
         const short ZONE = 2;
 
+
+        private static int ActiveWindow = 0;
         // Set Window Position
         [DllImport("user32.dll", EntryPoint = "SetWindowPos")]
         public static extern IntPtr SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
@@ -213,15 +216,98 @@ namespace serverApplication
             public static void StartApps()
             {
                 logMsg("Starting apps...");
+                // Initialize Splash Screen
+                proc[SPLASH] = new Process();
 
-                proc[CMS] = Process.Start(@"" + configPaths[0]); // Start CMS
-                proc[ZONE] = Process.Start(@"" + configPaths[3]); // Start Zone
+                // Start CMS
+                try
+                {
+                    proc[CMS] = new Process();
+                    proc[CMS].StartInfo.FileName = @"" + configPaths[0];
+                    proc[CMS].EnableRaisingEvents = true;
+                    proc[CMS].Exited += new EventHandler(CMS_HasExited);
+                    proc[CMS].Start();
+                }
+                catch (Exception ex)
+                {
+                    logMsg("Error Opening CMS " + ex.ToString());
+                }
+
+                //Start Zone
+                try
+                {
+                    proc[ZONE] = new Process();
+                    proc[ZONE].StartInfo.FileName = @"" + configPaths[3];
+                    proc[ZONE].EnableRaisingEvents = true;
+                    proc[ZONE].Exited += new EventHandler(ZONE_HasExited);
+                    proc[ZONE].Start();
+                }
+                catch (Exception ex)
+                {
+                    logMsg("Error Opening ZONE " + ex.ToString());
+                }
+
+                //proc[CMS] = Process.Start(@"" + configPaths[0]); // Start CMS              
+                //proc[ZONE] = Process.Start(@"" + configPaths[3]); // Start Zone
 
                 IntPtr handle = Process.GetCurrentProcess().MainWindowHandle;
                 ShowWindow(handle, ShowWindowCommand.SW_MINIMIZE);
 
                 appsStarted = true;
                 CMS_Obj.Started = true;
+            }
+
+
+            // Kill All Running VCast and Zone before we start the program
+            private static void Kill_All_Running_Process()
+            {
+                Process[] processlist = Process.GetProcesses();
+                foreach (Process theprocess in processlist)
+                {
+                    string ProcessName = theprocess.ProcessName.ToUpper();
+                    if (ProcessName.IndexOf("VCAST PLAYER V1.0") >= 0)
+                        theprocess.Kill();
+                }
+            }
+
+            // Restart CMS in case the process exit
+            private static void CMS_HasExited(object sender, System.EventArgs e)
+            {
+                try
+                {
+                    proc[CMS].Exited -= new EventHandler(CMS_HasExited);
+                    proc[CMS].Dispose();
+                    proc[CMS] = null;
+                    proc[CMS] = new Process();
+                    proc[CMS].StartInfo.FileName = @"" + configPaths[0];
+                    proc[CMS].EnableRaisingEvents = true;
+                    proc[CMS].Exited += new EventHandler(CMS_HasExited);
+                    proc[CMS].Start();
+                }
+                catch (Exception ex)
+                {
+                   logMsg("Error RE-Opening CMS " + ex.ToString());
+                }
+            }
+
+            // Restart ZONE in case the process exit
+            private static void ZONE_HasExited(object sender, System.EventArgs e)
+            {
+                try
+                {
+                    proc[ZONE].Exited -= new EventHandler(ZONE_HasExited);
+                    proc[ZONE].Dispose();
+                    proc[ZONE] = null;
+                    proc[ZONE] = new Process();
+                    proc[ZONE].StartInfo.FileName = @"" + configPaths[3];
+                    proc[ZONE].EnableRaisingEvents = true;
+                    proc[ZONE].Exited += new EventHandler(ZONE_HasExited);
+                    proc[ZONE].Start();
+                }
+                 catch (Exception ex)
+                {
+                   logMsg("Error RE-Opening ZONE " + ex.ToString());
+                }
             }
 
             public static void KillApps()
@@ -374,12 +460,14 @@ namespace serverApplication
                             break;
 
                         case "showCMS":
-                            while (CMS_Obj.Suspended)
-                            {
-                                CMS_Obj.Suspended = ProcessSuspend.ResumeCMS(proc[CMS]);
-                                logMsg("CMS IS SUSPENDED: " + CMS_Obj.Suspended.ToString());
-                            }
+                            //Temporary Removed
+                            //while (CMS_Obj.Suspended)
+                            //{
+                            //    CMS_Obj.Suspended = ProcessSuspend.ResumeCMS(proc[CMS]);
+                            //    logMsg("CMS IS SUSPENDED: " + CMS_Obj.Suspended.ToString());
+                            //}
 
+                            ActiveWindow = 0;
                             muteApp(CMS, false);
                             muteApp(ZONE, true);
                             showApp(CMS);
@@ -390,11 +478,14 @@ namespace serverApplication
                             muteApp(CMS, true);
                             muteApp(ZONE, false);
                             showApp(ZONE);
-                            while (!CMS_Obj.Suspended)
-                            {
-                                CMS_Obj.Suspended = ProcessSuspend.SuspendCMS(proc[CMS]);
-                                logMsg("CMS IS SUSPENDED: " + CMS_Obj.Suspended.ToString());
-                            }
+                            ActiveWindow = 1;
+
+                            //Temporary Removed
+                            //while (!CMS_Obj.Suspended)
+                            //{
+                            //    CMS_Obj.Suspended = ProcessSuspend.SuspendCMS(proc[CMS]);
+                            //    logMsg("CMS IS SUSPENDED: " + CMS_Obj.Suspended.ToString());
+                            //}
 
                             logMsg("showing ZONE");
                             break;
@@ -423,6 +514,8 @@ namespace serverApplication
                     }
                     handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
                 }
+                // Force a garbage collection to occur for this demo.
+                //GC.Collect();
             }
 
             public static void Send(Socket handler, String data)
@@ -457,34 +550,39 @@ namespace serverApplication
 
             public static void muteApp(int procNum, bool _muteApp)
             {
-                string appClass = null; // Process Class Name
-                string appDisplayName = null; // Process Display Name
+                //string appClass = null; // Process Class Name
+                //string appDisplayName = null; // Process Display Name
                 switch (procNum)
                 {
                     case CMS:
-                        appClass = configPaths[1];
-                        appDisplayName = null;
+                        VolumeMixer.SetApplicationMute((uint)proc[CMS].Id, _muteApp);
+                        VolumeMixer.SetApplicationVolume((uint)proc[ZONE].Id, 70);
+                        //appClass = configPaths[1];
+                        //appDisplayName = null;
                         break;
-
                     case ZONE:
-                        appClass = configPaths[4];
-                        appDisplayName = null;
+                        VolumeMixer.SetApplicationMute((uint)proc[ZONE].Id, _muteApp);
+                        VolumeMixer.SetApplicationVolume((uint)proc[CMS].Id, 70);
+                        //appClass = configPaths[4];
+                        //appDisplayName = null;
                         break;
                 }
 
-                var hWnd = FindWindow(appClass, appDisplayName);
-                if (hWnd == IntPtr.Zero)
-                    return;
+                //var hWnd = FindWindow(appClass, appDisplayName);
+                //if (hWnd == IntPtr.Zero)
+                //    return;
 
-                GetWindowThreadProcessId(hWnd, out pID);
-                if (pID == 0)
-                    return;
-                VolumeMixer.SetApplicationMute(pID, _muteApp);
+
+
+                //GetWindowThreadProcessId(hWnd, out pID);
+                //if (pID == 0)
+                //    return;
+                //VolumeMixer.SetApplicationMute(pID, _muteApp);
 
                 // Check if app being muted is indeed muted; if not, retry
-                if (_muteApp && VolumeMixer.GetApplicationMute(pID) != null)
-                    if(VolumeMixer.GetApplicationMute(pID) != true)
-                        muteApp(procNum, _muteApp);
+                //if (_muteApp && VolumeMixer.GetApplicationMute(pID) != null)
+                //    if(VolumeMixer.GetApplicationMute(pID) != true)
+                //        muteApp(procNum, _muteApp);
             }
 
             public static void showApp(int procNum)
@@ -558,9 +656,38 @@ namespace serverApplication
             public static int Main(string[] args)
             {
                 // Program Start
+                MoveMousePointerOutofBound();
+                KillAllVCast();
+                System.Threading.Timer _timer = new System.Threading.Timer(TimerCallback, null, 0, 1000);
                 AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
                 AsyncSocketListener.StartListening(); // Start Aynchronous Listener
                 return 0;
+            }
+
+            private static void TimerCallback(Object o)
+            {
+                // Display the date/time when this method got called.
+               // logMsg("In TimerCallback: " + DateTime.Now);
+               // Console.WriteLine("In TimerCallback: " + DateTime.Now);
+              
+                IntPtr handle = IntPtr.Zero; // Create a handle to manipulate the windows
+                //Always put the CMS at back every 1 sec if ActiveWindow is ZONE
+                if (ActiveWindow ==  1)
+                {
+                    try
+                    {
+                        handle = proc[CMS].MainWindowHandle;
+                        // Hide CMS window
+                        SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                        SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+                    }
+                    catch (Exception  ex)
+                    {
+                        Console.WriteLine("Error : " + ex.Message);
+                    }
+                }
+                // Force a garbage collection to occur for this demo.
+                GC.Collect();
             }
 
             static void OnProcessExit(object sender, EventArgs e)
@@ -569,6 +696,34 @@ namespace serverApplication
                 state.workSocket.Shutdown(SocketShutdown.Both);
                 state.workSocket.Close();
                 muteApp(CMS, false);
+                //Close all Process
+                CloseAllProcess();
+            }
+
+            static void CloseAllProcess()
+            {
+                proc[CMS].Kill();
+                proc[ZONE].Kill();
+                proc[SPLASH].Kill();
+            }
+            static void KillAllVCast()
+            {
+                Process[] processlist = Process.GetProcesses();
+
+                foreach (Process theprocess in processlist)
+                {
+                    string ProcessName = theprocess.ProcessName.ToUpper();
+                    if (ProcessName.IndexOf("VCAST PLAYER V1.0") >= 0)
+                    {
+                        theprocess.Kill();
+                        Console.WriteLine("Process: {0} ID: {1}", theprocess.ProcessName, theprocess.Id);
+                    }
+                }
+            }
+            // Hide the mouse pointer somewhere
+            static void MoveMousePointerOutofBound()
+            {
+                Cursor.Position = new Point(10000, 10000);
             }
         }
 
@@ -619,18 +774,14 @@ namespace serverApplication
                 foreach (ProcessThread thread in process.Threads)
                 {
                     var pOpenThread = OpenThread(THREAD_SUSPEND_RESUME, false, (uint)thread.Id);
-                    //if (pOpenThread == IntPtr.Zero)
-                    //{
-                    //    break;
-                    //}
                     try
                     {
                         SuspendThread(pOpenThread);
                         CloseHandle(pOpenThread);
                     }
-                    catch (Exception e)
+                    catch (Exception ex)
                     {
-                        Console.WriteLine("FAILED");
+                        Console.WriteLine("FAILED : " + ex.Message);
                         return false;
                     }
                 }
@@ -642,20 +793,14 @@ namespace serverApplication
                 foreach (ProcessThread thread in process.Threads)
                 {
                     var pOpenThread = OpenThread(THREAD_SUSPEND_RESUME, false, (uint)thread.Id);
-                    //if (pOpenThread == IntPtr.Zero)
-                    //{
-                    //    break;
-                    //}
-                    //ResumeThread(pOpenThread);
-                    //CloseHandle(pOpenThread);
                     try
                     {
                         ResumeThread(pOpenThread);
                         CloseHandle(pOpenThread);
                     }
-                    catch (Exception e)
+                    catch (Exception ex)
                     {
-                        Console.WriteLine("FAILED");
+                        Console.WriteLine("FAILED : "+ ex.Message);
                         return true;
                     }
                 }
