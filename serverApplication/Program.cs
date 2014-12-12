@@ -19,6 +19,7 @@ namespace serverApplication
     {
         private static string[] configPaths = new string[9];
         public static uint pID;
+        private static bool isclosing = false;
 
         const short SPLASH = 0;
         const short CMS = 1;
@@ -98,6 +99,31 @@ namespace serverApplication
         static extern bool ShowWindow(IntPtr handle, ShowWindowCommand command);
 
         const uint WM_KEYDOWN = 0x100;
+
+
+        #region unmanaged
+        // Declare the SetConsoleCtrlHandler function
+        // as external and receiving a delegate.
+
+        [DllImport("Kernel32")]
+        public static extern bool SetConsoleCtrlHandler(HandlerRoutine Handler, bool Add);
+
+        // A delegate type to be used as the handler routine
+        // for SetConsoleCtrlHandler.
+        public delegate bool HandlerRoutine(CtrlTypes CtrlType);
+
+        // An enumerated type for the control messages
+        // sent to the handler routine.
+        public enum CtrlTypes
+        {
+            CTRL_C_EVENT = 0,
+            CTRL_BREAK_EVENT,
+            CTRL_CLOSE_EVENT,
+            CTRL_LOGOFF_EVENT = 5,
+            CTRL_SHUTDOWN_EVENT
+        }
+
+        #endregion
 
         private enum ShowWindowCommand : int
         {
@@ -283,6 +309,7 @@ namespace serverApplication
                     proc[CMS].EnableRaisingEvents = true;
                     proc[CMS].Exited += new EventHandler(CMS_HasExited);
                     proc[CMS].Start();
+                    showApp(CMS);
                 }
                 catch (Exception ex)
                 {
@@ -303,6 +330,7 @@ namespace serverApplication
                     proc[ZONE].EnableRaisingEvents = true;
                     proc[ZONE].Exited += new EventHandler(ZONE_HasExited);
                     proc[ZONE].Start();
+                    showApp(CMS);
                 }
                  catch (Exception ex)
                 {
@@ -562,7 +590,7 @@ namespace serverApplication
                         break;
                     case ZONE:
                         VolumeMixer.SetApplicationMute((uint)proc[ZONE].Id, _muteApp);
-                        VolumeMixer.SetApplicationVolume((uint)proc[CMS].Id, 70);
+                        VolumeMixer.SetApplicationVolume((uint)proc[CMS].Id, 80);
                         //appClass = configPaths[4];
                         //appDisplayName = null;
                         break;
@@ -656,12 +684,46 @@ namespace serverApplication
             public static int Main(string[] args)
             {
                 // Program Start
+                SetConsoleCtrlHandler(new HandlerRoutine(ConsoleCtrlCheck), true);
                 MoveMousePointerOutofBound();
                 KillAllVCast();
                 System.Threading.Timer _timer = new System.Threading.Timer(TimerCallback, null, 0, 1000);
-                AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
+                AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
                 AsyncSocketListener.StartListening(); // Start Aynchronous Listener
                 return 0;
+            }
+
+
+            private static bool ConsoleCtrlCheck(CtrlTypes ctrlType)
+            {
+                // Put your own handler here
+                switch (ctrlType)
+                {
+                    case CtrlTypes.CTRL_C_EVENT:
+                        isclosing = true;
+                        Console.WriteLine("CTRL+C received!");
+                        break;
+
+                    case CtrlTypes.CTRL_BREAK_EVENT:
+                        isclosing = true;
+                        Console.WriteLine("CTRL+BREAK received!");
+                        break;
+
+                    case CtrlTypes.CTRL_CLOSE_EVENT:
+                        isclosing = true;
+                        CloseAllProcess();
+                        Console.WriteLine("Program being closed!");
+                        break;
+
+                    case CtrlTypes.CTRL_LOGOFF_EVENT:
+                    case CtrlTypes.CTRL_SHUTDOWN_EVENT:
+                        CloseAllProcess();
+                        isclosing = true;
+                        Console.WriteLine("User is logging off!");
+                        break;
+
+                }
+                return true;
             }
 
             private static void TimerCallback(Object o)
@@ -702,9 +764,37 @@ namespace serverApplication
 
             static void CloseAllProcess()
             {
-                proc[CMS].Kill();
-                proc[ZONE].Kill();
-                proc[SPLASH].Kill();
+                logMsg("Closing sockets..");
+                state.workSocket.Shutdown(SocketShutdown.Both);
+                state.workSocket.Close();
+                try
+                {
+                    proc[CMS].Kill();
+                }
+                catch (Exception e)
+                {
+                    logMsg(e.ToString());
+                }
+
+                try
+                {
+                    proc[ZONE].CloseMainWindow();
+                }
+                catch (Exception e)
+                {
+                    logMsg(e.ToString());
+                }
+
+                try
+                {
+                    if (splashShown)
+                        proc[SPLASH].Kill();
+                }
+                catch (Exception e)
+                {
+                    logMsg(e.ToString());
+                }
+
             }
             static void KillAllVCast()
             {
