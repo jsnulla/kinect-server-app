@@ -353,6 +353,9 @@ namespace serverApplication
                 }
                 AsyncSocketListener.StartApps();
 
+                // Hide Taskbar
+                ShowWindow(FindWindow("Shell_TrayWnd", null), ShowWindowCommand.SW_HIDE);
+
                 // Data buffer for incoming data
                 byte[] bytes = new Byte[1024];
 
@@ -765,9 +768,12 @@ namespace serverApplication
 
             static void CloseAllProcess()
             {
-                logMsg("Closing sockets..");
+                // Show Taskbar
+                ShowWindow(FindWindow("Shell_TrayWnd", null), ShowWindowCommand.SW_SHOW);
+                // Close socketsa
                 state.workSocket.Shutdown(SocketShutdown.Both);
                 state.workSocket.Close();
+
                 try
                 {
                     proc[CMS].Kill();
