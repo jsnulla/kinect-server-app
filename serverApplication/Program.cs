@@ -742,6 +742,7 @@ namespace serverApplication
                         // Hide CMS window
                         SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                         SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+                        MoveMousePointerOutofBound();
                     }
                     catch (Exception  ex)
                     {
