@@ -21,9 +21,10 @@ namespace serverApplication
         public static uint pID;
         private static bool isclosing = false;
 
-        const short SPLASH = 0;
-        const short CMS = 1;
-        const short ZONE = 2;
+        const short 
+        SPLASH = 0,
+        CMS = 1,
+        ZONE = 2;
 
 
         private static int ActiveWindow = 0;
@@ -245,6 +246,23 @@ namespace serverApplication
                 // Initialize Splash Screen
                 proc[SPLASH] = new Process();
 
+
+
+                //Start Zone
+                try
+                {
+                    proc[ZONE] = new Process();
+                    proc[ZONE].StartInfo.FileName = @"" + configPaths[3];
+                    proc[ZONE].EnableRaisingEvents = true;
+                    proc[ZONE].Exited += new EventHandler(ZONE_HasExited);
+                    proc[ZONE].Start();
+                    Thread.Sleep(5000); // Delay CMS start
+                }
+                catch (Exception ex)
+                {
+                    logMsg("Error Opening ZONE " + ex.ToString());
+                }
+
                 // Start CMS
                 try
                 {
@@ -257,20 +275,6 @@ namespace serverApplication
                 catch (Exception ex)
                 {
                     logMsg("Error Opening CMS " + ex.ToString());
-                }
-
-                //Start Zone
-                try
-                {
-                    proc[ZONE] = new Process();
-                    proc[ZONE].StartInfo.FileName = @"" + configPaths[3];
-                    proc[ZONE].EnableRaisingEvents = true;
-                    proc[ZONE].Exited += new EventHandler(ZONE_HasExited);
-                    proc[ZONE].Start();
-                }
-                catch (Exception ex)
-                {
-                    logMsg("Error Opening ZONE " + ex.ToString());
                 }
 
                 //proc[CMS] = Process.Start(@"" + configPaths[0]); // Start CMS              
@@ -355,6 +359,8 @@ namespace serverApplication
 
                 // Hide Taskbar
                 ShowWindow(FindWindow("Shell_TrayWnd", null), ShowWindowCommand.SW_HIDE);
+                // Hide Start Orb
+                ShowWindow(FindWindow("Button", "Start"), ShowWindowCommand.SW_HIDE);
 
                 // Data buffer for incoming data
                 byte[] bytes = new Byte[1024];
@@ -770,7 +776,10 @@ namespace serverApplication
             {
                 // Show Taskbar
                 ShowWindow(FindWindow("Shell_TrayWnd", null), ShowWindowCommand.SW_SHOW);
-                // Close socketsa
+                // Show Start Orb
+                ShowWindow(FindWindow("Button", "Start"), ShowWindowCommand.SW_SHOW);
+
+                // Close sockets
                 state.workSocket.Shutdown(SocketShutdown.Both);
                 state.workSocket.Close();
 
