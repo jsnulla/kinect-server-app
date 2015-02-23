@@ -367,6 +367,10 @@ namespace serverApplication
 
             public static void StartListening()
             {
+                System.Reflection.Assembly assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
+
+                logMsg("HTech's Server Application\nVersion: " + fvi.FileVersion);
                 logMsg("started");
                 while (readConfig() == false) {
                     // Keep reading config file
