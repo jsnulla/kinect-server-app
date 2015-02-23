@@ -26,6 +26,10 @@ namespace serverApplication
         CMS = 1,
         ZONE = 2;
 
+        const short
+        UPPER_LEFT = 0,
+        UPPER_RIGHT = 1;
+
 
         private static int ActiveWindow = 0;
         // Set Window Position
@@ -528,7 +532,6 @@ namespace serverApplication
                             muteApp(ZONE, false);
                             showApp(ZONE);
                             ActiveWindow = 1;
-                            MoveMousePointerOutofBound();
 
                             logMsg("showing ZONE");
                             break;
@@ -662,6 +665,9 @@ namespace serverApplication
                                 SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                                 SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                                 //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_MAXIMIZE); // Maximize CMS
+
+                                Thread.Sleep(250);
+                                MoveMousePointerOutofBound(UPPER_LEFT);
                                 break;
 
                             case ZONE:
@@ -674,6 +680,8 @@ namespace serverApplication
                                 //SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_HIDEWINDOW);
                                 SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                                 SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+
+                                MoveMousePointerOutofBound(UPPER_RIGHT);
                                 break;
                         }
 
@@ -708,7 +716,7 @@ namespace serverApplication
             {
                 // Program Start
                 SetConsoleCtrlHandler(new HandlerRoutine(ConsoleCtrlCheck), true);
-                MoveMousePointerOutofBound();
+                MoveMousePointerOutofBound(UPPER_RIGHT);
                 KillAllVCast();
                 System.Threading.Timer _timer = new System.Threading.Timer(TimerCallback, null, 0, 1000);
                 AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
@@ -761,7 +769,7 @@ namespace serverApplication
                         // Hide CMS window
                         SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                         SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
-                        MoveMousePointerOutofBound();
+                        MoveMousePointerOutofBound(UPPER_RIGHT);
                     }
                     catch (Exception  ex)
                     {
@@ -837,9 +845,12 @@ namespace serverApplication
                 }
             }
             // Hide the mouse pointer somewhere
-            static void MoveMousePointerOutofBound()
+            static void MoveMousePointerOutofBound(short screenPosition)
             {
-                Cursor.Position = new Point(0, 0);
+                if(screenPosition == UPPER_LEFT)
+                    Cursor.Position = new Point(0, 0);
+                else if(screenPosition == UPPER_RIGHT)
+                    Cursor.Position = new Point(Screen.PrimaryScreen.WorkingArea.Width, 0);
             }
         }
 
