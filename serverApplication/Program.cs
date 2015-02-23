@@ -240,41 +240,54 @@ namespace serverApplication
                 return true;
             }
 
-            public static void StartApps()
+            public static void StartApps(short application_name)
             {
                 logMsg("Starting apps...");
                 // Initialize Splash Screen
                 proc[SPLASH] = new Process();
 
 
+                switch (application_name)
+                {
+                    case ZONE:
+                        //Start Zone
+                        try
+                        {
+                            proc[ZONE] = new Process();
+                            proc[ZONE].StartInfo.FileName = @"" + configPaths[3];
+                            proc[ZONE].EnableRaisingEvents = true;
+                            proc[ZONE].Exited += new EventHandler(ZONE_HasExited);
+                            proc[ZONE].Start();
+                            //Thread.Sleep(5000); // Delay CMS start
+                        }
+                        catch (Exception ex)
+                        {
+                            logMsg("Error Opening ZONE " + ex.ToString());
+                        }
 
-                //Start Zone
-                try
-                {
-                    proc[ZONE] = new Process();
-                    proc[ZONE].StartInfo.FileName = @"" + configPaths[3];
-                    proc[ZONE].EnableRaisingEvents = true;
-                    proc[ZONE].Exited += new EventHandler(ZONE_HasExited);
-                    proc[ZONE].Start();
-                    Thread.Sleep(5000); // Delay CMS start
-                }
-                catch (Exception ex)
-                {
-                    logMsg("Error Opening ZONE " + ex.ToString());
-                }
+                        break;
 
-                // Start CMS
-                try
-                {
-                    proc[CMS] = new Process();
-                    proc[CMS].StartInfo.FileName = @"" + configPaths[0];
-                    proc[CMS].EnableRaisingEvents = true;
-                    proc[CMS].Exited += new EventHandler(CMS_HasExited);
-                    proc[CMS].Start();
-                }
-                catch (Exception ex)
-                {
-                    logMsg("Error Opening CMS " + ex.ToString());
+                    case CMS:
+                        // Start CMS
+                        try
+                        {
+                            proc[CMS] = new Process();
+                            proc[CMS].StartInfo.FileName = @"" + configPaths[0];
+                            proc[CMS].EnableRaisingEvents = true;
+                            proc[CMS].Exited += new EventHandler(CMS_HasExited);
+                            proc[CMS].Start();
+                            CMS_Obj.Started = true;
+                        }
+                        catch (Exception ex)
+                        {
+                            logMsg("Error Opening CMS " + ex.ToString());
+                        }
+
+                        break;
+
+                    default:
+                        logMsg("no application to start");
+                        break;
                 }
 
                 //proc[CMS] = Process.Start(@"" + configPaths[0]); // Start CMS              
@@ -284,7 +297,6 @@ namespace serverApplication
                 ShowWindow(handle, ShowWindowCommand.SW_MINIMIZE);
 
                 appsStarted = true;
-                CMS_Obj.Started = true;
             }
 
 
@@ -355,10 +367,10 @@ namespace serverApplication
                 while (readConfig() == false) {
                     // Keep reading config file
                 }
-                AsyncSocketListener.StartApps();
+                AsyncSocketListener.StartApps(ZONE);
 
                 // Hide Taskbar
-                ShowWindow(FindWindow("Shell_TrayWnd", null), ShowWindowCommand.SW_HIDE);
+                ShowWindow(FindWindow("Shell_TrayWnd", ""), ShowWindowCommand.SW_HIDE);
                 // Hide Start Orb
                 ShowWindow(FindWindow("Button", "Start"), ShowWindowCommand.SW_HIDE);
 
@@ -476,20 +488,21 @@ namespace serverApplication
                             break;
 
                         case "startCMS":
-                            if (proc[CMS] == null || CMS_Obj.Started == false)
-                            {
-                                try
-                                {
-                                    proc[CMS] = Process.Start(@"" + configPaths[0]); // Start CMS
-                                    CMS_Obj.Started = true;
-                                }
-                                catch (Exception e)
-                                {
-                                    CMS_Obj.Started = false;
-                                    logMsg(e.ToString());
-                                }
-                            }
-                            logMsg("starting cms");
+                            //if (proc[CMS] == null || CMS_Obj.Started == false)
+                            //{
+                            //    try
+                            //    {
+                            //        proc[CMS] = Process.Start(@"" + configPaths[0]); // Start CMS
+                            //        CMS_Obj.Started = true;
+                            //    }
+                            //    catch (Exception e)
+                            //    {
+                            //        CMS_Obj.Started = false;
+                            //        logMsg(e.ToString());
+                            //    }
+                            //}
+                            //logMsg("starting cms");
+                            AsyncSocketListener.StartApps(CMS);
                             break;
 
                         case "muteCMS":
@@ -497,12 +510,11 @@ namespace serverApplication
                             break;
 
                         case "showCMS":
-                            //Temporary Removed
-                            //while (CMS_Obj.Suspended)
-                            //{
-                            //    CMS_Obj.Suspended = ProcessSuspend.ResumeCMS(proc[CMS]);
-                            //    logMsg("CMS IS SUSPENDED: " + CMS_Obj.Suspended.ToString());
-                            //}
+                            if (!CMS_Obj.Started)
+                            {
+                                StartApps(CMS);
+                                break;
+                            }
 
                             ActiveWindow = 0;
                             muteApp(CMS, false);
@@ -516,13 +528,7 @@ namespace serverApplication
                             muteApp(ZONE, false);
                             showApp(ZONE);
                             ActiveWindow = 1;
-
-                            //Temporary Removed
-                            //while (!CMS_Obj.Suspended)
-                            //{
-                            //    CMS_Obj.Suspended = ProcessSuspend.SuspendCMS(proc[CMS]);
-                            //    logMsg("CMS IS SUSPENDED: " + CMS_Obj.Suspended.ToString());
-                            //}
+                            MoveMousePointerOutofBound();
 
                             logMsg("showing ZONE");
                             break;
@@ -534,7 +540,7 @@ namespace serverApplication
                         case "startApps": // Unity test
                             if (appsStarted == false)
                             {
-                                AsyncSocketListener.StartApps();
+                                AsyncSocketListener.StartApps(ZONE);
                             }
                             break;
 
@@ -551,8 +557,6 @@ namespace serverApplication
                     }
                     handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
                 }
-                // Force a garbage collection to occur for this demo.
-                //GC.Collect();
             }
 
             public static void Send(Socket handler, String data)
@@ -592,14 +596,28 @@ namespace serverApplication
                 switch (procNum)
                 {
                     case CMS:
-                        VolumeMixer.SetApplicationMute((uint)proc[CMS].Id, _muteApp);
-                        VolumeMixer.SetApplicationVolume((uint)proc[ZONE].Id, 70);
+                        try
+                        {
+                            VolumeMixer.SetApplicationMute((uint)proc[CMS].Id, _muteApp);
+                            VolumeMixer.SetApplicationVolume((uint)proc[ZONE].Id, 70);
+                        }
+                        catch (Exception err)
+                        {
+                            logMsg(err.ToString());
+                        }
                         //appClass = configPaths[1];
                         //appDisplayName = null;
                         break;
                     case ZONE:
-                        VolumeMixer.SetApplicationMute((uint)proc[ZONE].Id, _muteApp);
-                        VolumeMixer.SetApplicationVolume((uint)proc[CMS].Id, 80);
+                        try
+                        {
+                            VolumeMixer.SetApplicationMute((uint)proc[ZONE].Id, _muteApp);
+                            VolumeMixer.SetApplicationVolume((uint)proc[CMS].Id, 80);
+                        }
+                        catch (Exception err)
+                        {
+                            logMsg(err.ToString());
+                        }
                         //appClass = configPaths[4];
                         //appDisplayName = null;
                         break;
@@ -631,10 +649,6 @@ namespace serverApplication
                 //{
                     try
                     {
-                        //SetWindowPos(handle, (IntPtr)HWND_TOP, 0, 0, Screen.PrimaryScreen.WorkingArea.Width,
-                        //Screen.PrimaryScreen.WorkingArea.Height, SWP_NOMOVE);
-                        // Don't resize, don't move
-
                         switch (procNum)
                         {
                             case CMS:
@@ -736,11 +750,7 @@ namespace serverApplication
             }
 
             private static void TimerCallback(Object o)
-            {
-                // Display the date/time when this method got called.
-               // logMsg("In TimerCallback: " + DateTime.Now);
-               // Console.WriteLine("In TimerCallback: " + DateTime.Now);
-              
+            {              
                 IntPtr handle = IntPtr.Zero; // Create a handle to manipulate the windows
                 //Always put the CMS at back every 1 sec if ActiveWindow is ZONE
                 if (ActiveWindow ==  1)
@@ -775,7 +785,7 @@ namespace serverApplication
             static void CloseAllProcess()
             {
                 // Show Taskbar
-                ShowWindow(FindWindow("Shell_TrayWnd", null), ShowWindowCommand.SW_SHOW);
+                ShowWindow(FindWindow("Shell_TrayWnd", ""), ShowWindowCommand.SW_SHOW);
                 // Show Start Orb
                 ShowWindow(FindWindow("Button", "Start"), ShowWindowCommand.SW_SHOW);
 
@@ -829,7 +839,7 @@ namespace serverApplication
             // Hide the mouse pointer somewhere
             static void MoveMousePointerOutofBound()
             {
-                Cursor.Position = new Point(10000, 10000);
+                Cursor.Position = new Point(0, 0);
             }
         }
 
