@@ -36,6 +36,10 @@ namespace serverApplication
         [DllImport("user32.dll", EntryPoint = "SetWindowPos")]
         public static extern IntPtr SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
 
+        // Get Current Top Window
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
         // Window Z Order
         const int
         HWND_TOP = 0,
@@ -174,6 +178,8 @@ namespace serverApplication
             public static StateObject state;
             public static bool splashShown = false;
             public static bool appsStarted = false;
+            public static string zoneName = "";
+            public const string zoneClassName = "UnityWndClass";
 
             public AsyncSocketListener()
             {
@@ -183,17 +189,31 @@ namespace serverApplication
             static void logMsg(string msg)
             {
                 string timeNow = System.DateTime.Now.Hour.ToString() + ":";
+
                 if (int.Parse(System.DateTime.Now.Minute.ToString()) < 10)
                     timeNow += ("0" + System.DateTime.Now.Minute.ToString());
                 else
                     timeNow += System.DateTime.Now.Minute.ToString();
+
                 timeNow += ":" + System.DateTime.Now.Second.ToString();
 
                 Console.WriteLine(timeNow + "| " + msg);
+                string dateToday = DateTime.Today.Month + "-" + DateTime.Today.Day + "-" + DateTime.Today.Year;
+
+                checkLogDir();
+                try
+                {
+                    using (StreamWriter file = new StreamWriter(@"logs\\" + dateToday + ".txt", true))
+                        file.WriteLine(timeNow + ", " + msg + "\r\n");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Cannot write! Log file is being used by another program!");
+                }
             }
 
             public static bool readConfig() {
-                logMsg("reading config...");
+                logMsg("looking for config file . . .");
                 string configPath = AppDomain.CurrentDomain.BaseDirectory.ToString() + @"config_file.ini";
 
                 try
@@ -203,18 +223,15 @@ namespace serverApplication
                         logMsg("config file not found");
                         using (StreamWriter sw = File.CreateText(configPath))
                         {
-                            logMsg("creating config");
-                            sw.WriteLine("CMS EXE path");
-                            sw.WriteLine("CMS class name");
-                            sw.WriteLine("CMS display name");
-                            sw.WriteLine("Zone EXE here");
-                            sw.WriteLine("Zone class name (UnityWndClass)");
-                            sw.WriteLine("Zone display name");
-                            sw.WriteLine("Splash EXE");
-                            sw.WriteLine("Splash class name");
-                            sw.WriteLine("Splash display name");
+                            logMsg("creating config template");
+                            sw.WriteLine("C:\\Program Files (x86)\\Nyxsys Philippines Inc\\NYXSYS VCast Player\\VCast Player v1.0.exe");
+                            sw.WriteLine("WindowsForms10.Window.8.app.0.378734a");
+                            sw.WriteLine("NYXSYS-VCast 1.0");
+                            sw.WriteLine("kinectSplash.exe");
+                            sw.WriteLine("WindowsForms10.Window.8.app.0.2bf8098_r15_ad1");
+                            sw.WriteLine("kinectSplash");
                         }
-                        logMsg("config created");
+                        logMsg("config template created");
                         readConfig();
                     }
                     else
@@ -231,7 +248,15 @@ namespace serverApplication
                                 lineNumber++;
                             }
                         }
-                        //Console.Clear();
+
+                        string baseDir = AppDomain.CurrentDomain.BaseDirectory.ToString();
+                        foreach(string file in Directory.GetFiles(baseDir + @"..\")) {
+                            if(file.ToUpper().IndexOf("ZONE") > 0) {
+                                configPaths[6] = file;
+                                configPaths[7] = zoneClassName;
+                            }
+                        }
+                        
                         logMsg("config read");
                         return true;
                     }
@@ -244,12 +269,24 @@ namespace serverApplication
                 return true;
             }
 
+            public static void checkLogDir()
+            {
+                if (!Directory.Exists("logs")) {
+                    try {
+                        Directory.CreateDirectory("logs");
+                    }
+                    catch(Exception err) {
+                        logMsg(err.ToString());
+                    }
+                }
+            }
+
             public static void StartApps(short application_name)
             {
                 logMsg("Starting apps...");
+
                 // Initialize Splash Screen
                 proc[SPLASH] = new Process();
-
 
                 switch (application_name)
                 {
@@ -258,7 +295,7 @@ namespace serverApplication
                         try
                         {
                             proc[ZONE] = new Process();
-                            proc[ZONE].StartInfo.FileName = @"" + configPaths[3];
+                            proc[ZONE].StartInfo.FileName = @"" + configPaths[6];
                             proc[ZONE].EnableRaisingEvents = true;
                             proc[ZONE].Exited += new EventHandler(ZONE_HasExited);
                             proc[ZONE].Start();
@@ -266,12 +303,15 @@ namespace serverApplication
                         }
                         catch (Exception ex)
                         {
-                            logMsg("Error Opening ZONE " + ex.ToString());
+                            logMsg("Error Opening ZONE form path: " + configPaths[6]);
                         }
 
                         break;
 
                     case CMS:
+                        // Kill all other VCast instances
+                        KillAllVCast();
+
                         // Start CMS
                         try
                         {
@@ -284,7 +324,7 @@ namespace serverApplication
                         }
                         catch (Exception ex)
                         {
-                            logMsg("Error Opening CMS " + ex.ToString());
+                            logMsg("Error Opening CMS from path: " + configPaths[0]);
                         }
 
                         break;
@@ -293,9 +333,6 @@ namespace serverApplication
                         logMsg("no application to start");
                         break;
                 }
-
-                //proc[CMS] = Process.Start(@"" + configPaths[0]); // Start CMS              
-                //proc[ZONE] = Process.Start(@"" + configPaths[3]); // Start Zone
 
                 IntPtr handle = Process.GetCurrentProcess().MainWindowHandle;
                 ShowWindow(handle, ShowWindowCommand.SW_MINIMIZE);
@@ -346,7 +383,7 @@ namespace serverApplication
                     proc[ZONE].Dispose();
                     proc[ZONE] = null;
                     proc[ZONE] = new Process();
-                    proc[ZONE].StartInfo.FileName = @"" + configPaths[3];
+                    proc[ZONE].StartInfo.FileName = @"" + configPaths[6];
                     proc[ZONE].EnableRaisingEvents = true;
                     proc[ZONE].Exited += new EventHandler(ZONE_HasExited);
                     proc[ZONE].Start();
@@ -370,8 +407,9 @@ namespace serverApplication
                 System.Reflection.Assembly assembly = System.Reflection.Assembly.GetExecutingAssembly();
                 FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
 
-                logMsg("HTech's Server Application\nVersion: " + fvi.FileVersion);
-                logMsg("started");
+                logMsg("\r\n=======================================================");
+                logMsg("HTech's Server Application Version: " + fvi.FileVersion);
+
                 while (readConfig() == false) {
                     // Keep reading config file
                 }
@@ -465,7 +503,7 @@ namespace serverApplication
                             {
                                 try
                                 {
-                                    proc[SPLASH] = Process.Start(configPaths[6]);
+                                    proc[SPLASH] = Process.Start(configPaths[3]);
                                     splashShown = true;
                                     logMsg("showing splash");
                                 }
@@ -496,20 +534,6 @@ namespace serverApplication
                             break;
 
                         case "startCMS":
-                            //if (proc[CMS] == null || CMS_Obj.Started == false)
-                            //{
-                            //    try
-                            //    {
-                            //        proc[CMS] = Process.Start(@"" + configPaths[0]); // Start CMS
-                            //        CMS_Obj.Started = true;
-                            //    }
-                            //    catch (Exception e)
-                            //    {
-                            //        CMS_Obj.Started = false;
-                            //        logMsg(e.ToString());
-                            //    }
-                            //}
-                            //logMsg("starting cms");
                             AsyncSocketListener.StartApps(CMS);
                             break;
 
@@ -598,8 +622,6 @@ namespace serverApplication
 
             public static void muteApp(int procNum, bool _muteApp)
             {
-                //string appClass = null; // Process Class Name
-                //string appDisplayName = null; // Process Display Name
                 switch (procNum)
                 {
                     case CMS:
@@ -612,8 +634,6 @@ namespace serverApplication
                         {
                             logMsg(err.ToString());
                         }
-                        //appClass = configPaths[1];
-                        //appDisplayName = null;
                         break;
                     case ZONE:
                         try
@@ -625,80 +645,51 @@ namespace serverApplication
                         {
                             logMsg(err.ToString());
                         }
-                        //appClass = configPaths[4];
-                        //appDisplayName = null;
                         break;
                 }
-
-                //var hWnd = FindWindow(appClass, appDisplayName);
-                //if (hWnd == IntPtr.Zero)
-                //    return;
-
-
-
-                //GetWindowThreadProcessId(hWnd, out pID);
-                //if (pID == 0)
-                //    return;
-                //VolumeMixer.SetApplicationMute(pID, _muteApp);
-
-                // Check if app being muted is indeed muted; if not, retry
-                //if (_muteApp && VolumeMixer.GetApplicationMute(pID) != null)
-                //    if(VolumeMixer.GetApplicationMute(pID) != true)
-                //        muteApp(procNum, _muteApp);
             }
 
             public static void showApp(int procNum)
             {
-                //bool _isAppShown = false;
-
                 IntPtr handle = IntPtr.Zero; // Create a handle to manipulate the windows
-                //while (!_isAppShown)
-                //{
-                    try
+                handle = proc[procNum].MainWindowHandle;
+
+                try
+                {
+                    switch (procNum)
                     {
-                        switch (procNum)
-                        {
-                            case CMS:
-                                handle = proc[procNum].MainWindowHandle;
-                                // Show CMS window
-                                //SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-                                SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                                ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
+                        case CMS:
+                            // Show CMS window
+                            SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                            ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
 
-                                handle = proc[ZONE].MainWindowHandle;
-                                SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                                SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                                //ShowWindow(FindWindow(configPaths[1], null), ShowWindowCommand.SW_MAXIMIZE); // Maximize CMS
+                            handle = proc[ZONE].MainWindowHandle;
+                            SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                            SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
-                                Thread.Sleep(250);
-                                MoveMousePointerOutofBound(UPPER_LEFT);
-                                break;
+                            Thread.Sleep(250);
+                            MoveMousePointerOutofBound(UPPER_LEFT);
+                        break;
 
-                            case ZONE:
-                                handle = proc[procNum].MainWindowHandle;
-                                SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                                ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
+                        case ZONE:
+                            // Show Game window
+                            SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                            ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
 
-                                handle = proc[CMS].MainWindowHandle;
-                                // Hide CMS window
-                                //SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_HIDEWINDOW);
-                                SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                                SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+                            handle = proc[CMS].MainWindowHandle;
+                            SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                            SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
 
-                                MoveMousePointerOutofBound(UPPER_RIGHT);
-                                break;
-                        }
-
-                        SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
-                        //_isAppShown = true;
-                        // Don't resize, don't move, don't focus
+                            MoveMousePointerOutofBound(UPPER_RIGHT);
+                        break;
                     }
-                    catch (Exception e)
-                    {
-                        //_isAppShown = false;
-                        logMsg(e.ToString());
-                    }
-                //}
+
+                    SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+                }
+                catch (Exception e)
+                {
+                    logMsg(e.ToString());
+                }
             }
 
             public static void KeepSplashOnTop()
@@ -721,7 +712,6 @@ namespace serverApplication
                 // Program Start
                 SetConsoleCtrlHandler(new HandlerRoutine(ConsoleCtrlCheck), true);
                 MoveMousePointerOutofBound(UPPER_RIGHT);
-                KillAllVCast();
                 System.Threading.Timer _timer = new System.Threading.Timer(TimerCallback, null, 0, 1000);
                 AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
                 AsyncSocketListener.StartListening(); // Start Aynchronous Listener
@@ -802,8 +792,15 @@ namespace serverApplication
                 ShowWindow(FindWindow("Button", "Start"), ShowWindowCommand.SW_SHOW);
 
                 // Close sockets
-                state.workSocket.Shutdown(SocketShutdown.Both);
-                state.workSocket.Close();
+                try
+                {
+                    state.workSocket.Shutdown(SocketShutdown.Both);
+                    state.workSocket.Close();
+                }
+                catch (Exception e)
+                {
+                    logMsg(e.ToString());
+                }
 
                 try
                 {
@@ -834,6 +831,7 @@ namespace serverApplication
                 }
 
             }
+
             static void KillAllVCast()
             {
                 Process[] processlist = Process.GetProcesses();
@@ -848,6 +846,7 @@ namespace serverApplication
                     }
                 }
             }
+
             // Hide the mouse pointer somewhere
             static void MoveMousePointerOutofBound(short screenPosition)
             {
