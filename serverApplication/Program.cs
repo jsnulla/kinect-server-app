@@ -201,15 +201,18 @@ namespace serverApplication
                 string dateToday = DateTime.Today.Month + "-" + DateTime.Today.Day + "-" + DateTime.Today.Year;
 
                 checkLogDir();
-                try
-                {
-                    using (StreamWriter file = new StreamWriter(@"logs\\" + dateToday + ".txt", true))
-                        file.WriteLine(timeNow + ", " + msg + "\r\n");
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Cannot write! Log file is being used by another program!");
-                }
+                //try
+                //{
+                //    using (StreamWriter file = new StreamWriter(@"logs\\" + dateToday + ".txt", true))
+                //    {
+                //        file.WriteLine(timeNow + ", " + msg + "\r\n");
+                //        file.Close();
+                //    }
+                //}
+                //catch (Exception e)
+                //{
+                //    Console.WriteLine("Cannot write! Log file is being used by another program!");
+                //}
             }
 
             public static bool readConfig() {
@@ -776,12 +779,19 @@ namespace serverApplication
 
             static void OnProcessExit(object sender, EventArgs e)
             {
-                logMsg("Closing sockets..");
-                state.workSocket.Shutdown(SocketShutdown.Both);
-                state.workSocket.Close();
-                muteApp(CMS, false);
+                try
+                {
+                    logMsg("Closing sockets..");
+                    state.workSocket.Shutdown(SocketShutdown.Both);
+                    state.workSocket.Close();
+                    muteApp(CMS, false);
+                    CloseAllProcess();
+                }
+                catch (Exception err)
+                {
+                    logMsg(err.ToString());
+                }
                 //Close all Process
-                CloseAllProcess();
             }
 
             static void CloseAllProcess()
@@ -839,10 +849,17 @@ namespace serverApplication
                 foreach (Process theprocess in processlist)
                 {
                     string ProcessName = theprocess.ProcessName.ToUpper();
-                    if (ProcessName.IndexOf("VCAST PLAYER V1.0") >= 0)
+                    if (ProcessName.IndexOf("VCAST PLAYER V1.0") >= 0 || ProcessName.IndexOf("VCAST-PLAYER V1.0") >= 0)
                     {
-                        theprocess.Kill();
-                        Console.WriteLine("Process: {0} ID: {1}", theprocess.ProcessName, theprocess.Id);
+                        try
+                        {
+                            theprocess.Kill();
+                            Console.WriteLine("Process: {0} ID: {1}", theprocess.ProcessName, theprocess.Id);
+                        }
+                        catch (Exception err)
+                        {
+                            logMsg(err.ToString());
+                        }
                     }
                 }
             }
@@ -854,87 +871,6 @@ namespace serverApplication
                     Cursor.Position = new Point(0, 0);
                 else if(screenPosition == UPPER_RIGHT)
                     Cursor.Position = new Point(Screen.PrimaryScreen.WorkingArea.Width, 0);
-            }
-        }
-
-        public class ProcessSuspend
-        {
-            [DllImport("kernel32.dll")]
-            static extern uint GetLastError();
-
-            public ProcessSuspend()
-            {
-
-            }
-
-            public static bool SuspendCMS(Process proc)
-            {
-                if (!CMS_Obj.Suspended)
-                {
-                    try
-                    {
-                        return Suspend(proc);
-                    }
-                    catch(Exception e)
-                    {
-                        Console.WriteLine(e.ToString());
-                    }
-                }
-                return false;
-            }
-
-            public static bool ResumeCMS(Process proc)
-            {
-                if (CMS_Obj.Suspended)
-                {
-                    try
-                    {
-                        return Resume(proc);
-                    }
-                    catch(Exception e)
-                    {
-                        Console.WriteLine(e.ToString());
-                    }
-                }
-                return false;
-            }
-
-            public static bool Suspend(Process process)
-            {
-                foreach (ProcessThread thread in process.Threads)
-                {
-                    var pOpenThread = OpenThread(THREAD_SUSPEND_RESUME, false, (uint)thread.Id);
-                    try
-                    {
-                        SuspendThread(pOpenThread);
-                        CloseHandle(pOpenThread);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("FAILED : " + ex.Message);
-                        return false;
-                    }
-                }
-                return true;
-            }
-
-            public static bool Resume(Process process)
-            {
-                foreach (ProcessThread thread in process.Threads)
-                {
-                    var pOpenThread = OpenThread(THREAD_SUSPEND_RESUME, false, (uint)thread.Id);
-                    try
-                    {
-                        ResumeThread(pOpenThread);
-                        CloseHandle(pOpenThread);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("FAILED : "+ ex.Message);
-                        return true;
-                    }
-                }
-                return false;
             }
         }
 
