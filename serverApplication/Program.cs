@@ -17,110 +17,18 @@ namespace serverApplication
 {
     class Program
     {
-        private static string[] configPaths = new string[9];
-        public static uint pID;
-        private static bool isclosing = false;
-
-        const short 
-        SPLASH = 0,
-        CMS = 1,
-        ZONE = 2;
-
-        const short
-        UPPER_LEFT = 0,
-        UPPER_RIGHT = 1;
-
-
-        private static int ActiveWindow = 0;
-        // Set Window Position
-        [DllImport("user32.dll", EntryPoint = "SetWindowPos")]
-        public static extern IntPtr SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
-
-        // Get Current Top Window
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetForegroundWindow();
-
-        // Window Z Order
-        const int
-        HWND_TOP = 0,
-        HWND_BOTTOM = 1,
-        HWND_TOPMOST = -1,
-        HWND_NOTTOPMOST = -2;
-
-        // Window Position Flags
-        const int
-        SWP_NOSIZE = 0x0001,
-        SWP_NOMOVE = 0x0002,
-        SWP_NOZORDER = 0x0004,
-        SWP_NOREDRAW = 0x0008,
-        SWP_NOACTIVATE = 0x0010,
-        SWP_DRAWFRAME = 0x0020,
-        SWP_FRAMECHANGED = 0x0020,
-        SWP_SHOWWINDOW = 0x0040,
-        SWP_HIDEWINDOW = 0x0080,
-        SWP_NOCOPYBITS = 0x0100,
-        SWP_NOOWNERZORDER = 0x0200,
-        SWP_NOREPOSITION = 0x0200,
-        SWP_NOSENDCHANGING = 0x0400,
-        SWP_DEFERERASE = 0x2000,
-        SWP_ASYNCWINDOWPOS = 0x4000;
-
-        [DllImport("kernel32.dll")]
-        static extern IntPtr OpenThread(int dwDesiredAccess, bool bInheritHandle, uint dwThreadId);
-        [DllImport("kernel32.dll")]
-        static extern uint SuspendThread(IntPtr hThread);
-        [DllImport("kernel32.dll")]
-        static extern int ResumeThread(IntPtr hThread);
-        [DllImport("kernel32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool CloseHandle(IntPtr hObject);
-
-        // Thread Acess
-        const int
-        THREAD_TERMINATE = (0x0001),
-        THREAD_SUSPEND_RESUME = (0x0002),
-        THREAD_GET_CONTEXT = (0x0008),
-        THREAD_SET_CONTEXT = (0x0010),
-        THREAD_SET_INFORMATION = (0x0020),
-        THREAD_QUERY_INFORMATION = (0x0040),
-        THREAD_SET_THREAD_TOKEN = (0x0080),
-        THREAD_IMPERSONATE = (0x0100),
-        THREAD_DIRECT_IMPERSONATION = (0x0200);
-
-        // sound
-        [DllImport("user32.dll")]
-        static extern IntPtr FindWindow(string strClassName, string strWindowName);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
-        //
-
-        [DllImport("user32.dll", SetLastError = true)]
-        static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string lpszClass, string lpszWindow);
-
-        [DllImport("user32.dll", EntryPoint = "PostMessageA")]
-        static extern bool PostMessage(IntPtr hWnd, uint msg, int wParam, int lParam);
-
-        [DllImport("user32.dll")]
-        static extern byte VkKeyScan(char ch);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        static extern bool ShowWindow(IntPtr handle, ShowWindowCommand command);
-
-        const uint WM_KEYDOWN = 0x100;
-
-
-        #region unmanaged
+        #region native methods
         // Declare the SetConsoleCtrlHandler function
         // as external and receiving a delegate.
-
         [DllImport("Kernel32")]
         public static extern bool SetConsoleCtrlHandler(HandlerRoutine Handler, bool Add);
 
         // A delegate type to be used as the handler routine
         // for SetConsoleCtrlHandler.
         public delegate bool HandlerRoutine(CtrlTypes CtrlType);
+        #endregion
 
+        #region enums
         // An enumerated type for the control messages
         // sent to the handler routine.
         public enum CtrlTypes
@@ -131,967 +39,137 @@ namespace serverApplication
             CTRL_LOGOFF_EVENT = 5,
             CTRL_SHUTDOWN_EVENT
         }
-
         #endregion
 
-        private enum ShowWindowCommand : int
+        public static int Main(string[] args)
         {
-            SW_HIDE = 0,
-            SW_SHOWNORMAL = 1,
-            SW_NORMAL = 1,
-            SW_SHOWMINIMIZED = 2,
-            SW_SHOWMAXIMIZED = 3,
-            SW_MAXIMIZE = 3,
-            SW_SHOWNOACTIVATE = 4,
-            SW_SHOW = 5,
-            SW_MINIMIZE = 6,
-            SW_SHOWMINNOACTIVE = 7,
-            SW_SHOWNA = 8,
-            SW_RESTORE = 9,
-            SW_SHOWDEFAULT = 10,
-            SW_FORCEMINIMIZE = 11,
-            SW_MAX = 11,
+            // Program Start
+            SetConsoleCtrlHandler(new HandlerRoutine(ConsoleCtrlCheck), true);
+            AsyncSocketListener.MoveMousePointerOutofBound(AsyncSocketListener.UPPER_RIGHT);
+            System.Threading.Timer _timer = new System.Threading.Timer(TimerCallback, null, 0, 1000);
+            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+            AsyncSocketListener.StartListening(); // Start Aynchronous Listener
+            return 0;
         }
 
-        public static class CMS_Obj
+        private static bool ConsoleCtrlCheck(CtrlTypes ctrlType)
         {
-            public static bool Started { get; set; }
-            public static bool Suspended { get; set; }
+            // Put your own handler here
+            switch (ctrlType)
+            {
+                case CtrlTypes.CTRL_C_EVENT:
+                    AsyncSocketListener.isclosing = true;
+                    Console.WriteLine("CTRL+C received!");
+                    break;
+
+                case CtrlTypes.CTRL_BREAK_EVENT:
+                    AsyncSocketListener.isclosing = true;
+                    Console.WriteLine("CTRL+BREAK received!");
+                    break;
+
+                case CtrlTypes.CTRL_CLOSE_EVENT:
+                    AsyncSocketListener.isclosing = true;
+                    CloseAllProcess();
+                    Console.WriteLine("Program being closed!");
+                    break;
+
+                case CtrlTypes.CTRL_LOGOFF_EVENT:
+                case CtrlTypes.CTRL_SHUTDOWN_EVENT:
+                    CloseAllProcess();
+                    AsyncSocketListener.isclosing = true;
+                    Console.WriteLine("User is logging off!");
+                    break;
+
+            }
+            return true;
         }
 
-        public class StateObject
+        private static void TimerCallback(Object o)
         {
-            // Client Socket
-            public Socket workSocket = null;
-            // Size of receive buffer
-            public const int BufferSize = 1024;
-            // Receive buffer
-            public byte[] buffer = new byte[BufferSize];
-            // Received data string
-            public StringBuilder sb = new StringBuilder();
-        }
-
-        public class AsyncSocketListener
-        {
-            public static ManualResetEvent allDone = new ManualResetEvent(false);
-            public static Process[] proc = new Process[3];
-            public static StateObject state;
-            public static bool splashShown = false;
-            public static bool appsStarted = false;
-            public static string zoneName = "";
-            public const string zoneClassName = "UnityWndClass";
-
-            public AsyncSocketListener()
-            {
-                // Construct
-            }
-
-            static void logMsg(string msg)
-            {
-                string timeNow = System.DateTime.Now.Hour.ToString() + ":";
-
-                if (int.Parse(System.DateTime.Now.Minute.ToString()) < 10)
-                    timeNow += ("0" + System.DateTime.Now.Minute.ToString());
-                else
-                    timeNow += System.DateTime.Now.Minute.ToString();
-
-                timeNow += ":" + System.DateTime.Now.Second.ToString();
-
-                Console.WriteLine(timeNow + "| " + msg);
-                string dateToday = DateTime.Today.Month + "-" + DateTime.Today.Day + "-" + DateTime.Today.Year;
-
-                checkLogDir();
-                //try
-                //{
-                //    using (StreamWriter file = new StreamWriter(@"logs\\" + dateToday + ".txt", true))
-                //    {
-                //        file.WriteLine(timeNow + ", " + msg + "\r\n");
-                //        file.Close();
-                //    }
-                //}
-                //catch (Exception e)
-                //{
-                //    Console.WriteLine("Cannot write! Log file is being used by another program!");
-                //}
-            }
-
-            public static bool readConfig() {
-                logMsg("looking for config file . . .");
-                string configPath = AppDomain.CurrentDomain.BaseDirectory.ToString() + @"config_file.ini";
-
-                try
-                {
-                    if (!File.Exists(configPath)) // If file does not exist
-                    {
-                        logMsg("config file not found");
-                        using (StreamWriter sw = File.CreateText(configPath))
-                        {
-                            logMsg("creating config template");
-                            sw.WriteLine("C:\\Program Files (x86)\\Nyxsys Philippines Inc\\NYXSYS VCast Player\\VCast Player v1.0.exe");
-                            sw.WriteLine("WindowsForms10.Window.8.app.0.378734a");
-                            sw.WriteLine("NYXSYS-VCast 1.0");
-                            sw.WriteLine("kinectSplash.exe");
-                            sw.WriteLine("WindowsForms10.Window.8.app.0.2bf8098_r15_ad1");
-                            sw.WriteLine("kinectSplash");
-                        }
-                        logMsg("config template created");
-                        readConfig();
-                    }
-                    else
-                    {
-                        logMsg("config found");
-                        using (StreamReader sr = File.OpenText(configPath))
-                        {
-                            logMsg("reading config");
-                            int lineNumber = 0;
-                            string s = "";
-                            while ((s = sr.ReadLine()) != null)
-                            {
-                                configPaths[lineNumber] = s;
-                                lineNumber++;
-                            }
-                        }
-
-                        string baseDir = AppDomain.CurrentDomain.BaseDirectory.ToString();
-                        foreach(string file in Directory.GetFiles(baseDir + @"..\")) {
-                            if(file.ToUpper().IndexOf("ZONE") > 0) {
-                                configPaths[6] = file;
-                                configPaths[7] = zoneClassName;
-                            }
-                        }
-                        
-                        logMsg("config read");
-                        return true;
-                    }
-                }
-                catch (Exception e)
-                {
-                    logMsg("config read error: " + e.ToString());
-                    return false;
-                }
-                return true;
-            }
-
-            public static void checkLogDir()
-            {
-                if (!Directory.Exists("logs")) {
-                    try {
-                        Directory.CreateDirectory("logs");
-                    }
-                    catch(Exception err) {
-                        logMsg(err.ToString());
-                    }
-                }
-            }
-
-            public static void StartApps(short application_name)
-            {
-                logMsg("Starting apps...");
-
-                // Initialize Splash Screen
-                proc[SPLASH] = new Process();
-
-                switch (application_name)
-                {
-                    case ZONE:
-                        //Start Zone
-                        try
-                        {
-                            proc[ZONE] = new Process();
-                            proc[ZONE].StartInfo.FileName = @"" + configPaths[6];
-                            proc[ZONE].EnableRaisingEvents = true;
-                            proc[ZONE].Exited += new EventHandler(ZONE_HasExited);
-                            proc[ZONE].Start();
-                            //Thread.Sleep(5000); // Delay CMS start
-                        }
-                        catch (Exception ex)
-                        {
-                            logMsg("Error Opening ZONE form path: " + configPaths[6]);
-                        }
-
-                        break;
-
-                    case CMS:
-                        // Kill all other VCast instances
-                        KillAllVCast();
-
-                        // Start CMS
-                        try
-                        {
-                            proc[CMS] = new Process();
-                            proc[CMS].StartInfo.FileName = @"" + configPaths[0];
-                            proc[CMS].EnableRaisingEvents = true;
-                            proc[CMS].Exited += new EventHandler(CMS_HasExited);
-                            proc[CMS].Start();
-                            CMS_Obj.Started = true;
-                        }
-                        catch (Exception ex)
-                        {
-                            logMsg("Error Opening CMS from path: " + configPaths[0]);
-                        }
-
-                        break;
-
-                    default:
-                        logMsg("no application to start");
-                        break;
-                }
-
-                IntPtr handle = Process.GetCurrentProcess().MainWindowHandle;
-                ShowWindow(handle, ShowWindowCommand.SW_MINIMIZE);
-
-                appsStarted = true;
-            }
-
-
-            // Kill All Running VCast and Zone before we start the program
-            private static void Kill_All_Running_Process()
-            {
-                Process[] processlist = Process.GetProcesses();
-                foreach (Process theprocess in processlist)
-                {
-                    string ProcessName = theprocess.ProcessName.ToUpper();
-                    if (ProcessName.IndexOf("VCAST PLAYER V1.0") >= 0)
-                        theprocess.Kill();
-                }
-            }
-
-            // Restart CMS in case the process exit
-            private static void CMS_HasExited(object sender, System.EventArgs e)
+            IntPtr handle = IntPtr.Zero; // Create a handle to manipulate the windows
+            //Always put the CMS at back every 1 sec if ActiveWindow is ZONE
+            if (AsyncSocketListener.ActiveWindow == 1)
             {
                 try
                 {
-                    proc[CMS].Exited -= new EventHandler(CMS_HasExited);
-                    proc[CMS].Dispose();
-                    proc[CMS] = null;
-                    proc[CMS] = new Process();
-                    proc[CMS].StartInfo.FileName = @"" + configPaths[0];
-                    proc[CMS].EnableRaisingEvents = true;
-                    proc[CMS].Exited += new EventHandler(CMS_HasExited);
-                    proc[CMS].Start();
-                    showApp(CMS);
+                    handle = AsyncSocketListener.proc[AsyncSocketListener.CMS].MainWindowHandle;
+                    // Hide CMS window
+                    AsyncSocketListener.SetWindowPos(handle, (IntPtr)AsyncSocketListener.HWND_NOTTOPMOST, 0, 0, 0, 0, AsyncSocketListener.SWP_NOMOVE | AsyncSocketListener.SWP_NOSIZE);
+                    AsyncSocketListener.SetWindowPos(handle, (IntPtr)AsyncSocketListener.HWND_BOTTOM, 0, 0, 0, 0, AsyncSocketListener.SWP_NOSIZE | AsyncSocketListener.SWP_NOMOVE);
+                    AsyncSocketListener.MoveMousePointerOutofBound(AsyncSocketListener.UPPER_RIGHT);
                 }
                 catch (Exception ex)
                 {
-                   logMsg("Error RE-Opening CMS " + ex.ToString());
+                    Console.WriteLine("Error : " + ex.Message);
                 }
             }
-
-            // Restart ZONE in case the process exit
-            private static void ZONE_HasExited(object sender, System.EventArgs e)
-            {
-                try
-                {
-                    proc[ZONE].Exited -= new EventHandler(ZONE_HasExited);
-                    proc[ZONE].Dispose();
-                    proc[ZONE] = null;
-                    proc[ZONE] = new Process();
-                    proc[ZONE].StartInfo.FileName = @"" + configPaths[6];
-                    proc[ZONE].EnableRaisingEvents = true;
-                    proc[ZONE].Exited += new EventHandler(ZONE_HasExited);
-                    proc[ZONE].Start();
-                    showApp(CMS);
-                }
-                 catch (Exception ex)
-                {
-                   logMsg("Error RE-Opening ZONE " + ex.ToString());
-                }
-            }
-
-            public static void KillApps()
-            {
-                proc[CMS].CloseMainWindow(); // Kill CMS
-                proc[ZONE].CloseMainWindow(); // Kill Zone
-                appsStarted = false;
-            }
-
-            public static void StartListening()
-            {
-                System.Reflection.Assembly assembly = System.Reflection.Assembly.GetExecutingAssembly();
-                FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
-
-                logMsg("\r\n=======================================================");
-                logMsg("HTech's Server Application Version: " + fvi.FileVersion);
-
-                while (readConfig() == false) {
-                    // Keep reading config file
-                }
-                AsyncSocketListener.StartApps(ZONE);
-
-                // Hide Taskbar
-                ShowWindow(FindWindow("Shell_TrayWnd", ""), ShowWindowCommand.SW_HIDE);
-                // Hide Start Orb
-                ShowWindow(FindWindow("Button", "Start"), ShowWindowCommand.SW_HIDE);
-
-                // Data buffer for incoming data
-                byte[] bytes = new Byte[1024];
-
-                // Create a TCP/IP socket
-                Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-                try
-                {
-                    sock.Bind(new IPEndPoint(0, 1234));
-                    sock.Listen(100);
-
-                    while (true)
-                    {
-                        // Set the event to nonsignaled state.
-                        allDone.Reset();
-
-                        // Start async socket to listen for connections
-                        sock.BeginAccept(new AsyncCallback(AcceptCallback), sock);
-
-                        // Wait until a connection is made before continuing
-                        allDone.WaitOne();
-                        logMsg("Connection successful");
-                    }
-                }
-                catch (Exception e)
-                {
-                    // Error
-                    logMsg(e.ToString());
-                }
-            }
-
-            public static void AcceptCallback(IAsyncResult asyncResult)
-            {
-                // Signal main thread to continue
-                allDone.Set();
-
-                // Get the socket that handles the client request
-                Socket listener = (Socket) asyncResult.AsyncState;
-                Socket handler = listener.EndAccept(asyncResult);
-
-                // Create the state object
-                state = new StateObject();
-                state.workSocket = handler;
-                handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
-            }
-
-            public static void ReadCallback(IAsyncResult asyncResult)
-            {
-                String content = String.Empty;
-
-                // Retreive the state object and the handler socket
-                // from the asynchronous state object
-                StateObject state = (StateObject) asyncResult.AsyncState;
-                Socket handler = state.workSocket;
-
-                // Read data from the client socket
-                int bytesRead = 0;
-                try
-                {
-                    bytesRead = handler.EndReceive(asyncResult);
-                }
-                catch (Exception e)
-                {
-                    logMsg(e.ToString());
-                    logMsg("Connection was forcibly closed");
-                }
-
-                if (bytesRead > 0)
-                {
-                    state.sb.Clear();
-                    state.sb.Append(Encoding.ASCII.GetString(state.buffer, 0, bytesRead));
-
-                    // Check for end-of-file tag. If it is not here, read more data
-                    content = state.sb.ToString();
-
-                    switch (content)
-                    {
-                        case "playerDetected":
-                            //if (!splashShown)
-                            while (!splashShown)
-                            {
-                                try
-                                {
-                                    proc[SPLASH] = Process.Start(configPaths[3]);
-                                    splashShown = true;
-                                    logMsg("showing splash");
-                                }
-                                catch (Exception e)
-                                {
-                                    splashShown = false;
-                                    logMsg(e.ToString());
-                                }
-                            }
-                            break;
-
-                        case "noPlayer":
-                            //if (splashShown == true) // Kill splash screen since player is not detected or the player quit
-                            while (splashShown)
-                            {
-                                try
-                                {
-                                    proc[SPLASH].Kill();
-                                    splashShown = false;
-                                    logMsg("killing splash");
-                                }
-                                catch (Exception e)
-                                {
-                                    splashShown = true;
-                                    logMsg(e.ToString());
-                                }
-                            }
-                            break;
-
-                        case "startCMS":
-                            AsyncSocketListener.StartApps(CMS);
-                            break;
-
-                        case "muteCMS":
-                            muteApp(CMS, true); // Mute CMS
-                            break;
-
-                        case "showCMS":
-                            if (!CMS_Obj.Started)
-                            {
-                                StartApps(CMS);
-                                break;
-                            }
-
-                            ActiveWindow = 0;
-                            muteApp(CMS, false);
-                            muteApp(ZONE, true);
-                            showApp(CMS);
-                            logMsg("showing CMS");
-                            break;
-
-                        case "showZone":
-                            muteApp(CMS, true);
-                            muteApp(ZONE, false);
-                            showApp(ZONE);
-                            ActiveWindow = 1;
-
-                            logMsg("showing ZONE");
-                            break;
-
-                        case "topSplash":
-                            KeepSplashOnTop();
-                            break;
-
-                        case "startApps": // Unity test
-                            if (appsStarted == false)
-                            {
-                                AsyncSocketListener.StartApps(ZONE);
-                            }
-                            break;
-
-                        case "killApps": // Unity test
-                            if (appsStarted == true)
-                            {
-                                AsyncSocketListener.KillApps();
-                            }
-                            break;
-
-                        default:
-                            logMsg(content);
-                            break;
-                    }
-                    handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
-                }
-            }
-
-            public static void Send(Socket handler, String data)
-            {
-                // Convert the string data to byte data using ASCII encoding
-                byte[] byteData = Encoding.ASCII.GetBytes(data);
-
-                // Begin sending the data the remote device
-                handler.BeginSend(byteData, 0, byteData.Length, 0, new AsyncCallback(SendCallback), handler);
-                handler.Shutdown(SocketShutdown.Both);
-                handler.Close();
-            }
-
-            public static void SendCallback(IAsyncResult asyncResult)
-            {
-                try
-                {
-                    // Retrieve the socket from the state object
-                    Socket handler = (Socket) asyncResult.AsyncState;
-
-                    // Complete sending the data to the remote device
-                    int bytesSent = handler.EndSend(asyncResult);
-
-                    handler.Shutdown(SocketShutdown.Both);
-                    handler.Close();
-                }
-                catch (Exception e)
-                {
-                    logMsg(e.ToString());
-                }
-            }
-
-            public static void muteApp(int procNum, bool _muteApp)
-            {
-                switch (procNum)
-                {
-                    case CMS:
-                        try
-                        {
-                            VolumeMixer.SetApplicationMute((uint)proc[CMS].Id, _muteApp);
-                            VolumeMixer.SetApplicationVolume((uint)proc[ZONE].Id, 70);
-                        }
-                        catch (Exception err)
-                        {
-                            logMsg(err.ToString());
-                        }
-                        break;
-                    case ZONE:
-                        try
-                        {
-                            VolumeMixer.SetApplicationMute((uint)proc[ZONE].Id, _muteApp);
-                            VolumeMixer.SetApplicationVolume((uint)proc[CMS].Id, 80);
-                        }
-                        catch (Exception err)
-                        {
-                            logMsg(err.ToString());
-                        }
-                        break;
-                }
-            }
-
-            public static void showApp(int procNum)
-            {
-                IntPtr handle = IntPtr.Zero; // Create a handle to manipulate the windows
-                handle = proc[procNum].MainWindowHandle;
-
-                try
-                {
-                    switch (procNum)
-                    {
-                        case CMS:
-                            // Show CMS window
-                            SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                            ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
-
-                            handle = proc[ZONE].MainWindowHandle;
-                            SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                            SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-
-                            Thread.Sleep(250);
-                            MoveMousePointerOutofBound(UPPER_LEFT);
-                        break;
-
-                        case ZONE:
-                            // Show Game window
-                            SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                            ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
-
-                            handle = proc[CMS].MainWindowHandle;
-                            SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                            SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
-
-                            MoveMousePointerOutofBound(UPPER_RIGHT);
-                        break;
-                    }
-
-                    SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
-                }
-                catch (Exception e)
-                {
-                    logMsg(e.ToString());
-                }
-            }
-
-            public static void KeepSplashOnTop()
-            {
-                IntPtr handle = IntPtr.Zero; // Create a handle to manipulate the windows
-                try
-                {
-                    handle = proc[SPLASH].MainWindowHandle;
-                    SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                    //ShowWindow(handle, ShowWindowCommand.SW_SHOW);
-                }
-                catch (Exception e)
-                {
-                    logMsg(e.ToString());
-                }
-            }
-
-            public static int Main(string[] args)
-            {
-                // Program Start
-                SetConsoleCtrlHandler(new HandlerRoutine(ConsoleCtrlCheck), true);
-                MoveMousePointerOutofBound(UPPER_RIGHT);
-                System.Threading.Timer _timer = new System.Threading.Timer(TimerCallback, null, 0, 1000);
-                AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
-                AsyncSocketListener.StartListening(); // Start Aynchronous Listener
-                return 0;
-            }
-
-
-            private static bool ConsoleCtrlCheck(CtrlTypes ctrlType)
-            {
-                // Put your own handler here
-                switch (ctrlType)
-                {
-                    case CtrlTypes.CTRL_C_EVENT:
-                        isclosing = true;
-                        Console.WriteLine("CTRL+C received!");
-                        break;
-
-                    case CtrlTypes.CTRL_BREAK_EVENT:
-                        isclosing = true;
-                        Console.WriteLine("CTRL+BREAK received!");
-                        break;
-
-                    case CtrlTypes.CTRL_CLOSE_EVENT:
-                        isclosing = true;
-                        CloseAllProcess();
-                        Console.WriteLine("Program being closed!");
-                        break;
-
-                    case CtrlTypes.CTRL_LOGOFF_EVENT:
-                    case CtrlTypes.CTRL_SHUTDOWN_EVENT:
-                        CloseAllProcess();
-                        isclosing = true;
-                        Console.WriteLine("User is logging off!");
-                        break;
-
-                }
-                return true;
-            }
-
-            private static void TimerCallback(Object o)
-            {              
-                IntPtr handle = IntPtr.Zero; // Create a handle to manipulate the windows
-                //Always put the CMS at back every 1 sec if ActiveWindow is ZONE
-                if (ActiveWindow ==  1)
-                {
-                    try
-                    {
-                        handle = proc[CMS].MainWindowHandle;
-                        // Hide CMS window
-                        SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                        SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
-                        MoveMousePointerOutofBound(UPPER_RIGHT);
-                    }
-                    catch (Exception  ex)
-                    {
-                        Console.WriteLine("Error : " + ex.Message);
-                    }
-                }
-                // Force a garbage collection to occur for this demo.
-                GC.Collect();
-            }
-
-            static void OnProcessExit(object sender, EventArgs e)
-            {
-                try
-                {
-                    logMsg("Closing sockets..");
-                    state.workSocket.Shutdown(SocketShutdown.Both);
-                    state.workSocket.Close();
-                    muteApp(CMS, false);
-                    CloseAllProcess();
-                }
-                catch (Exception err)
-                {
-                    logMsg(err.ToString());
-                }
-                //Close all Process
-            }
-
-            static void CloseAllProcess()
-            {
-                // Show Taskbar
-                ShowWindow(FindWindow("Shell_TrayWnd", ""), ShowWindowCommand.SW_SHOW);
-                // Show Start Orb
-                ShowWindow(FindWindow("Button", "Start"), ShowWindowCommand.SW_SHOW);
-
-                // Close sockets
-                try
-                {
-                    state.workSocket.Shutdown(SocketShutdown.Both);
-                    state.workSocket.Close();
-                }
-                catch (Exception e)
-                {
-                    logMsg(e.ToString());
-                }
-
-                try
-                {
-                    proc[CMS].Kill();
-                }
-                catch (Exception e)
-                {
-                    logMsg(e.ToString());
-                }
-
-                try
-                {
-                    proc[ZONE].CloseMainWindow();
-                }
-                catch (Exception e)
-                {
-                    logMsg(e.ToString());
-                }
-
-                try
-                {
-                    if (splashShown)
-                        proc[SPLASH].Kill();
-                }
-                catch (Exception e)
-                {
-                    logMsg(e.ToString());
-                }
-
-            }
-
-            static void KillAllVCast()
-            {
-                Process[] processlist = Process.GetProcesses();
-
-                foreach (Process theprocess in processlist)
-                {
-                    string ProcessName = theprocess.ProcessName.ToUpper();
-                    if (ProcessName.IndexOf("VCAST PLAYER V1.0") >= 0 || ProcessName.IndexOf("VCAST-PLAYER V1.0") >= 0)
-                    {
-                        try
-                        {
-                            theprocess.Kill();
-                            Console.WriteLine("Process: {0} ID: {1}", theprocess.ProcessName, theprocess.Id);
-                        }
-                        catch (Exception err)
-                        {
-                            logMsg(err.ToString());
-                        }
-                    }
-                }
-            }
-
-            // Hide the mouse pointer somewhere
-            static void MoveMousePointerOutofBound(short screenPosition)
-            {
-                if(screenPosition == UPPER_LEFT)
-                    Cursor.Position = new Point(0, 0);
-                else if(screenPosition == UPPER_RIGHT)
-                    Cursor.Position = new Point(Screen.PrimaryScreen.WorkingArea.Width, 0);
-            }
+            // Force a garbage collection to occur for this demo.
+            GC.Collect();
         }
 
-        public class VolumeMixer
+        static void CloseAllProcess()
         {
-            public static float? GetApplicationVolume(uint pid)
-            {
-                ISimpleAudioVolume volume = GetVolumeObject(pid);
-                if (volume == null)
-                    return null;
+            // Show Taskbar
+            AsyncSocketListener.ShowWindow(AsyncSocketListener.FindWindow("Shell_TrayWnd", ""), AsyncSocketListener.ShowWindowCommand.SW_SHOW);
+            // Show Start Orb
+            AsyncSocketListener.ShowWindow(AsyncSocketListener.FindWindow("Button", "Start"), AsyncSocketListener.ShowWindowCommand.SW_SHOW);
 
-                float level;
-                volume.GetMasterVolume(out level);
-                Marshal.ReleaseComObject(volume);
-                return level * 100;
+            // Close sockets
+            try
+            {
+                AsyncSocketListener.state.workSocket.Shutdown(SocketShutdown.Both);
+                AsyncSocketListener.state.workSocket.Close();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
             }
 
-            public static bool? GetApplicationMute(uint pid)
+            try
             {
-                ISimpleAudioVolume volume = GetVolumeObject(pid);
-                if (volume == null)
-                    return null;
-
-                bool mute;
-                volume.GetMute(out mute);
-                Marshal.ReleaseComObject(volume);
-                return mute;
+                AsyncSocketListener.proc[AsyncSocketListener.CMS].Kill();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
             }
 
-            public static void SetApplicationVolume(uint pid, float level)
+            try
             {
-                ISimpleAudioVolume volume = GetVolumeObject(pid);
-                if (volume == null)
-                    return;
-
-                Guid guid = Guid.Empty;
-                volume.SetMasterVolume(level / 100, ref guid);
-                Marshal.ReleaseComObject(volume);
+                AsyncSocketListener.proc[AsyncSocketListener.ZONE].CloseMainWindow();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
             }
 
-            public static void SetApplicationMute(uint pid, bool mute)
+            try
             {
-                ISimpleAudioVolume volume = GetVolumeObject(pid);
-                if (volume == null)
-                    return;
-
-                Guid guid = Guid.Empty;
-                volume.SetMute(mute, ref guid);
-                Marshal.ReleaseComObject(volume);
+                if (AsyncSocketListener.splashShown)
+                    AsyncSocketListener.proc[AsyncSocketListener.SPLASH].Kill();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
             }
 
-            private static ISimpleAudioVolume GetVolumeObject(uint pid)
+        }
+
+        static void OnProcessExit(object sender, EventArgs e)
+        {
+            try
             {
-                // get the speakers (1st render + multimedia) device
-                IMMDeviceEnumerator deviceEnumerator = (IMMDeviceEnumerator)(new MMDeviceEnumerator());
-                IMMDevice speakers;
-                deviceEnumerator.GetDefaultAudioEndpoint(EDataFlow.eRender, ERole.eMultimedia, out speakers);
-
-                // activate the session manager. we need the enumerator
-                Guid IID_IAudioSessionManager2 = typeof(IAudioSessionManager2).GUID;
-                object o;
-                speakers.Activate(ref IID_IAudioSessionManager2, 0, IntPtr.Zero, out o);
-                IAudioSessionManager2 mgr = (IAudioSessionManager2)o;
-
-                // enumerate sessions for on this device
-                IAudioSessionEnumerator sessionEnumerator;
-                mgr.GetSessionEnumerator(out sessionEnumerator);
-                uint count;
-                sessionEnumerator.GetCount(out count);
-
-                // search for an audio session with the required name
-                // NOTE: we could also use the process id instead of the app name (with IAudioSessionControl2)
-                ISimpleAudioVolume volumeControl = null;
-                for (uint i = 0; i < count; i++)
-                {
-                    IAudioSessionControl2 ctl;
-                    sessionEnumerator.GetSession(i, out ctl);
-                    uint cpid;
-                    ctl.GetProcessId(out cpid);
-
-                    if (cpid == pid)
-                    {
-                        volumeControl = ctl as ISimpleAudioVolume;
-                        break;
-                    }
-                    Marshal.ReleaseComObject(ctl);
-                }
-                Marshal.ReleaseComObject(sessionEnumerator);
-                Marshal.ReleaseComObject(mgr);
-                Marshal.ReleaseComObject(speakers);
-                Marshal.ReleaseComObject(deviceEnumerator);
-                return volumeControl;
+                Console.WriteLine("Closing sockets..");
+                AsyncSocketListener.state.workSocket.Shutdown(SocketShutdown.Both);
+                AsyncSocketListener.state.workSocket.Close();
+                AsyncSocketListener.muteApp(AsyncSocketListener.CMS, false);
+                CloseAllProcess();
             }
-        }
-
-        [ComImport]
-        [Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
-        internal class MMDeviceEnumerator
-        {
-        }
-
-        internal enum EDataFlow
-        {
-            eRender,
-            eCapture,
-            eAll,
-            EDataFlow_enum_count
-        }
-
-        internal enum ERole
-        {
-            eConsole,
-            eMultimedia,
-            eCommunications,
-            ERole_enum_count
-        }
-
-        [Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        internal interface IMMDeviceEnumerator
-        {
-            uint NotImpl1();
-
-            [PreserveSig]
-            uint GetDefaultAudioEndpoint(EDataFlow dataFlow, ERole role, out IMMDevice ppDevice);
-
-            // the rest is not implemented
-        }
-
-        [Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        internal interface IMMDevice
-        {
-            [PreserveSig]
-            uint Activate(ref Guid iid, uint dwClsCtx, IntPtr pActivationParams, [MarshalAs(UnmanagedType.IUnknown)] out object ppInterface);
-
-            // the rest is not implemented
-        }
-
-        [Guid("77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        internal interface IAudioSessionManager2
-        {
-            uint NotImpl1();
-            uint NotImpl2();
-
-            [PreserveSig]
-            uint GetSessionEnumerator(out IAudioSessionEnumerator SessionEnum);
-
-            // the rest is not implemented
-        }
-
-        [Guid("E2F5BB11-0570-40CA-ACDD-3AA01277DEE8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        internal interface IAudioSessionEnumerator
-        {
-            [PreserveSig]
-            uint GetCount(out uint SessionCount);
-
-            [PreserveSig]
-            uint GetSession(uint SessionCount, out IAudioSessionControl2 Session);
-        }
-
-        [Guid("87CE5498-68D6-44E5-9215-6DA47EF883D8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        internal interface ISimpleAudioVolume
-        {
-            [PreserveSig]
-            uint SetMasterVolume(float fLevel, ref Guid EventContext);
-
-            [PreserveSig]
-            uint GetMasterVolume(out float pfLevel);
-
-            [PreserveSig]
-            uint SetMute(bool bMute, ref Guid EventContext);
-
-            [PreserveSig]
-            uint GetMute(out bool pbMute);
-        }
-
-        [Guid("bfb7ff88-7239-4fc9-8fa2-07c950be9c6d"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        internal interface IAudioSessionControl2
-        {
-            // IAudioSessionControl
-            [PreserveSig]
-            uint NotImpl0();
-
-            [PreserveSig]
-            uint GetDisplayName([MarshalAs(UnmanagedType.LPWStr)] out string pRetVal);
-
-            [PreserveSig]
-            uint SetDisplayName([MarshalAs(UnmanagedType.LPWStr)]string Value, [MarshalAs(UnmanagedType.LPStruct)] Guid EventContext);
-
-            [PreserveSig]
-            uint GetIconPath([MarshalAs(UnmanagedType.LPWStr)] out string pRetVal);
-
-            [PreserveSig]
-            uint SetIconPath([MarshalAs(UnmanagedType.LPWStr)] string Value, [MarshalAs(UnmanagedType.LPStruct)] Guid EventContext);
-
-            [PreserveSig]
-            uint GetGroupingParam(out Guid pRetVal);
-
-            [PreserveSig]
-            uint SetGroupingParam([MarshalAs(UnmanagedType.LPStruct)] Guid Override, [MarshalAs(UnmanagedType.LPStruct)] Guid EventContext);
-
-            [PreserveSig]
-            uint NotImpl1();
-
-            [PreserveSig]
-            uint NotImpl2();
-
-            // IAudioSessionControl2
-            [PreserveSig]
-            uint GetSessionIdentifier([MarshalAs(UnmanagedType.LPWStr)] out string pRetVal);
-
-            [PreserveSig]
-            uint GetSessionInstanceIdentifier([MarshalAs(UnmanagedType.LPWStr)] out string pRetVal);
-
-            [PreserveSig]
-            uint GetProcessId(out uint pRetVal);
-
-            [PreserveSig]
-            uint IsSystemSoundsSession();
-
-            [PreserveSig]
-            uint SetDuckingPreference(bool optOut);
+            catch (Exception err)
+            {
+                Console.WriteLine(err.ToString());
+            }
+            //Close all Process
         }
     }
 }

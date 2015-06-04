@@ -34,3 +34,11 @@ C:\Users\HTech\Documents\kinect-app-controller\serverApplication\bin\Debug\serve
 C:\Users\HTech\Documents\kinect-app-controller\serverApplication\bin\Debug\serverApplication.pdb
 C:\Users\HTech\Documents\kinect-app-controller\serverApplication\obj\Debug\serverApplication.exe
 C:\Users\HTech\Documents\kinect-app-controller\serverApplication\obj\Debug\serverApplication.pdb
+C:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\bin\Debug\serverApplication.exe.config
+C:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debug\serverApplication.exe
+C:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debug\serverApplication.pdb
+C:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debug\serverApplication.csprojResolveAssemblyReference.cache
+C:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debug\serverApplication.Properties.Resources.resources
+C:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debug\serverApplication.csproj.GenerateResource.Cache
+C:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\bin\Debug\serverApplication.exe
+C:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\bin\Debug\serverApplication.pdb
