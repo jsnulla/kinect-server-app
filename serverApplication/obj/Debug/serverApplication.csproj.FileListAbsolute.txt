@@ -42,3 +42,11 @@ C:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debu
 C:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debug\serverApplication.csproj.GenerateResource.Cache
 C:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\bin\Debug\serverApplication.exe
 C:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\bin\Debug\serverApplication.pdb
+D:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\bin\Debug\serverApplication.exe.config
+D:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\bin\Debug\serverApplication.exe
+D:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\bin\Debug\serverApplication.pdb
+D:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debug\serverApplication.csprojResolveAssemblyReference.cache
+D:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debug\serverApplication.Properties.Resources.resources
+D:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debug\serverApplication.csproj.GenerateResource.Cache
+D:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debug\serverApplication.exe
+D:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debug\serverApplication.pdb

@@ -11,14 +11,21 @@ namespace serverApplication
     {
         public static float? GetApplicationVolume(uint pid)
         {
-            ISimpleAudioVolume volume = GetVolumeObject(pid);
-            if (volume == null)
-                return null;
+            try
+            {
+                ISimpleAudioVolume volume = GetVolumeObject(pid);
+                if (volume == null)
+                    return null;
 
-            float level;
-            volume.GetMasterVolume(out level);
-            Marshal.ReleaseComObject(volume);
-            return level * 100;
+                float level;
+                volume.GetMasterVolume(out level);
+                Marshal.ReleaseComObject(volume);
+                return level * 100;
+            }
+            finally
+            {
+                Console.WriteLine("App cannot be mutted");
+            }
         }
 
         public static bool? GetApplicationMute(uint pid)

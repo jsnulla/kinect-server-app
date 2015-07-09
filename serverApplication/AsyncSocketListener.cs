@@ -20,6 +20,8 @@ namespace serverApplication
         private static string[] configPaths = new string[9];
         public static uint pID;
         public static bool isclosing = false;
+        public static bool cameraDisabled = false;
+        const string deviceToDisable = "Kinect for Windows Camera";
 
         public const short
         SPLASH = 0,
@@ -559,6 +561,38 @@ namespace serverApplication
                         if (appsStarted == true)
                         {
                             AsyncSocketListener.KillApps();
+                        }
+                        break;
+
+                    case "disableCamera":
+                        if (cameraDisabled == false)
+                        {
+                            logMsg("disabling camera");
+                            //try
+                            //{
+                            //    DeviceHelper.SetDeviceEnabled(deviceToDisable, false);
+                            //    cameraDisabled = true;
+                            //}
+                            //catch(Exception e)
+                            //{
+                            //    logMsg(e.ToString());
+                            //}
+                        }
+                        break;
+
+                    case "enableCamera":
+                        if (cameraDisabled == true)
+                        {
+                            logMsg("enabling camera");
+                            //try
+                            //{
+                            //    DeviceHelper.SetDeviceEnabled(deviceToDisable, true);
+                            //    cameraDisabled = false;
+                            //}
+                            //catch(Exception e)
+                            //{
+                            //    logMsg(e.ToString());
+                            //}
                         }
                         break;
 
