@@ -181,7 +181,7 @@ namespace serverApplication
                         sw.WriteLine("C:\\Program Files (x86)\\Nyxsys Philippines Inc\\NYXSYS VCast Player\\VCast Player v1.0.exe");
                         sw.WriteLine("WindowsForms10.Window.8.app.0.378734a");
                         sw.WriteLine("NYXSYS-VCast 1.0");
-                        sw.WriteLine("kinectSplash.exe");
+                        sw.WriteLine("kinect-splash-wpf.exe");
                         sw.WriteLine("WindowsForms10.Window.8.app.0.2bf8098_r15_ad1");
                         sw.WriteLine("kinectSplash");
                     }
