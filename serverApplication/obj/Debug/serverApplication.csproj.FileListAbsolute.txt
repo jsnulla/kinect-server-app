@@ -50,3 +50,12 @@ D:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debu
 D:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debug\serverApplication.csproj.GenerateResource.Cache
 D:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debug\serverApplication.exe
 D:\Users\jsnulla\Documents\Projects\kinect-server-app\serverApplication\obj\Debug\serverApplication.pdb
+C:\Users\Jason\Documents\kinect-server-app\serverApplication\bin\Debug\serverApplication.exe.config
+C:\Users\Jason\Documents\kinect-server-app\serverApplication\obj\Debug\serverApplication.exe
+C:\Users\Jason\Documents\kinect-server-app\serverApplication\obj\Debug\serverApplication.pdb
+C:\Users\Jason\Documents\kinect-server-app\serverApplication\bin\Debug\ServerConfig.xml
+C:\Users\Jason\Documents\kinect-server-app\serverApplication\bin\Debug\serverApplication.exe
+C:\Users\Jason\Documents\kinect-server-app\serverApplication\bin\Debug\serverApplication.pdb
+C:\Users\Jason\Documents\kinect-server-app\serverApplication\obj\Debug\serverApplication.csprojResolveAssemblyReference.cache
+C:\Users\Jason\Documents\kinect-server-app\serverApplication\obj\Debug\serverApplication.Properties.Resources.resources
+C:\Users\Jason\Documents\kinect-server-app\serverApplication\obj\Debug\serverApplication.csproj.GenerateResource.Cache

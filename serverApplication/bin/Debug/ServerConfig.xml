@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<root>
+  <VCast>
+    <Path>C:\Program Files (x86)\Nyxsys Philippines Inc\EAC VCast Player\VCast Player v1.0.exe</Path>
+    <WindowName>NYXSYS-VCast 1.0</WindowName>
+    <ClassName>WindowsForms10.Window.8.app.0.378734a</ClassName>
+    <UseClass>True</UseClass>
+  </VCast>
+
+  <Game>
+    <FileName>CoC_Zone.exe</FileName>
+    <WindowName>CoC_Zone</WindowName>
+    <ClassName></ClassName>
+    <UseClass>True</UseClass>
+  </Game>
+
+  <SplashScreen>
+    <FileName>kinectSplash.exe</FileName>
+    <WindowName>kinectSplash</WindowName>
+    <ClassName></ClassName>
+    <UseClass>False</UseClass>
+  </SplashScreen>
+</root>

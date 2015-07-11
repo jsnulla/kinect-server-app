@@ -11,11 +11,34 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml;
 
 namespace serverApplication
 {
     public class AsyncSocketListener
     {
+        #region config variables
+
+        const string StatisticsFileName = "Statistics.xml";
+        const string ConfigeFileName = "ServerConfig.xml";
+
+        static string VCastPath = String.Empty;
+        static string VCastWindowName = String.Empty;
+        static string VCastClassName = String.Empty;
+        static bool VCastUseClass = false;
+
+        static string GameFileName = String.Empty;
+        static string GameWindowName = String.Empty;
+        static string GameClassName = String.Empty;
+        static bool GameUseClass = false;
+
+        static string SplashScreenPath = String.Empty;
+        static string SplashScreenWindowName = String.Empty;
+        static string SplashScreenClassName = String.Empty;
+        static bool SplashScreenUseClass = false;
+
+        #endregion
+
         #region variables
         private static string[] configPaths = new string[9];
         public static uint pID;
@@ -168,7 +191,7 @@ namespace serverApplication
         public static bool readConfig()
         {
             logMsg("looking for config file . . .");
-            string configPath = AppDomain.CurrentDomain.BaseDirectory.ToString() + @"config_file.ini";
+            string configPath = AppDomain.CurrentDomain.BaseDirectory.ToString() + ConfigeFileName;
 
             try
             {
@@ -178,43 +201,64 @@ namespace serverApplication
                     using (StreamWriter sw = File.CreateText(configPath))
                     {
                         logMsg("creating config template");
-                        sw.WriteLine("C:\\Program Files (x86)\\Nyxsys Philippines Inc\\NYXSYS VCast Player\\VCast Player v1.0.exe");
-                        sw.WriteLine("WindowsForms10.Window.8.app.0.378734a");
-                        sw.WriteLine("NYXSYS-VCast 1.0");
-                        sw.WriteLine("kinect-splash-wpf.exe");
-                        sw.WriteLine("WindowsForms10.Window.8.app.0.2bf8098_r15_ad1");
-                        sw.WriteLine("kinectSplash");
+
+                        sw.WriteLine(@"<?xml version=""1.0"" encoding=""utf-8"" ?>");
+                        sw.WriteLine("<root>");
+                        sw.WriteLine("  <VCast>");
+                        sw.WriteLine("    <Path>C:\\Program Files (x86)\\Nyxsys Philippines Inc\\EAC VCast Player\\VCast Player v1.0.exe</Path>");
+                        sw.WriteLine("    <WindowName>NYXSYS-VCast 1.0</WindowName>");
+                        sw.WriteLine("    <ClassName>WindowsForms10.Window.8.app.0.378734a</ClassName>");
+                        sw.WriteLine("    <UseClass>True</UseClass>");
+                        sw.WriteLine("  </VCast>");
+                        sw.WriteLine("");
+                        sw.WriteLine("  <Game>");
+                        sw.WriteLine("    <FileName>CoC_Zone.exe</FileName>");
+                        sw.WriteLine("    <WindowName>CoC_Zone</WindowName>");
+                        sw.WriteLine("    <ClassName></ClassName>");
+                        sw.WriteLine("    <UseClass>True</UseClass>");
+                        sw.WriteLine("  </Game>");
+                        sw.WriteLine("");
+                        sw.WriteLine("  <SplashScreen>");
+                        sw.WriteLine("    <FileName>kinectSplash.exe</FileName>");
+                        sw.WriteLine("    <WindowName>kinectSplash</WindowName>");
+                        sw.WriteLine("    <ClassName></ClassName>");
+                        sw.WriteLine("    <UseClass>False</UseClass>");
+                        sw.WriteLine("  </SplashScreen>");
+                        sw.WriteLine("</root>");
                     }
+
                     logMsg("config template created");
                     readConfig();
                 }
                 else
                 {
                     logMsg("config found");
-                    using (StreamReader sr = File.OpenText(configPath))
-                    {
-                        logMsg("reading config");
-                        int lineNumber = 0;
-                        string s = "";
-                        while ((s = sr.ReadLine()) != null)
-                        {
-                            configPaths[lineNumber] = s;
-                            lineNumber++;
-                        }
-                    }
+                    ReadXML();
 
-                    string baseDir = AppDomain.CurrentDomain.BaseDirectory.ToString();
-                    foreach (string file in Directory.GetFiles(baseDir + @"..\"))
-                    {
-                        if (file.ToUpper().IndexOf("ZONE") > 0)
-                        {
-                            configPaths[6] = file;
-                            configPaths[7] = zoneClassName;
-                        }
-                    }
+                    //using (StreamReader sr = File.OpenText(configPath))
+                    //{
+                    //    logMsg("reading config");
+                    //    int lineNumber = 0;
+                    //    string s = "";
+                    //    while ((s = sr.ReadLine()) != null)
+                    //    {
+                    //        configPaths[lineNumber] = s;
+                    //        lineNumber++;
+                    //    }
+                    //}
 
-                    logMsg("config read");
-                    return true;
+                    //string baseDir = AppDomain.CurrentDomain.BaseDirectory.ToString();
+                    //foreach (string file in Directory.GetFiles(baseDir + @"..\"))
+                    //{
+                    //    if (file.ToUpper().IndexOf("ZONE") > 0)
+                    //    {
+                    //        configPaths[6] = file;
+                    //        configPaths[7] = zoneClassName;
+                    //    }
+                    //}
+
+                    //logMsg("config read");
+                    //return true;
                 }
             }
             catch (Exception e)
@@ -223,6 +267,123 @@ namespace serverApplication
                 return false;
             }
             return true;
+        }
+
+        public static void ReadXML()
+        {
+            XmlDocument config = new XmlDocument();
+            config.Load(ConfigeFileName);
+
+            foreach (XmlNode parentNode in config.DocumentElement)
+            {
+                if (parentNode.ChildNodes.Count > 0)
+                {
+                    foreach (XmlNode childNode in parentNode)
+                    {
+                        switch (childNode.ParentNode.Name)
+                        {
+                            case "VCast":
+                                if (childNode.Name == "Path")
+                                    VCastPath = childNode.InnerText;
+                                else if (childNode.Name == "WindowName")
+                                    VCastWindowName = childNode.InnerText;
+                                else if (childNode.Name == "ClassName")
+                                    VCastClassName = childNode.InnerText;
+                                else if (childNode.Name == "UseClass")
+                                    VCastUseClass = bool.Parse(childNode.InnerText);
+                                break;
+
+                            case "Game":
+                                if (childNode.Name == "FileName")
+                                    GameFileName = childNode.InnerText;
+                                else if (childNode.Name == "WindowName")
+                                    GameWindowName = childNode.InnerText;
+                                else if (childNode.Name == "ClassName")
+                                    GameClassName = childNode.InnerText;
+                                else if (childNode.Name == "UseClass")
+                                    GameUseClass = bool.Parse(childNode.InnerText);
+                                break;
+
+                            case "SplashScreen":
+                                if (childNode.Name == "FileName")
+                                    SplashScreenPath = childNode.InnerText;
+                                else if (childNode.Name == "WindowName")
+                                    SplashScreenWindowName = childNode.InnerText;
+                                else if (childNode.Name == "ClassName")
+                                    SplashScreenClassName = childNode.InnerText;
+                                else if (childNode.Name == "UseClass")
+                                    SplashScreenUseClass = bool.Parse(childNode.InnerText);
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void UserPlayed()
+        {
+            string[] Months = new string[12] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+            string statisticsPath = AppDomain.CurrentDomain.BaseDirectory.ToString() + StatisticsFileName;
+            if (File.Exists(statisticsPath) == false)
+            {
+                using (StreamWriter sw = File.CreateText(statisticsPath))
+                {
+                    sw.WriteLine(@"<?xml version=""1.0"" encoding=""utf-8"" ?>");
+                    sw.WriteLine("<root>");
+                    sw.WriteLine("  <LastUsed></LastUsed>");
+                    sw.WriteLine("  <TotalPlays></TotalPlays>");
+                    sw.WriteLine("</root>");
+                }
+            }
+
+            XmlDocument statistics = new XmlDocument();
+            statistics.Load(StatisticsFileName);
+
+            bool DateTodayExists = false;
+
+            string DateToday = Months[System.DateTime.Today.Month - 1] + "-";
+            DateToday += System.DateTime.Today.Day.ToString() + "-" + System.DateTime.Today.Year.ToString();
+
+            Console.WriteLine(DateToday);
+            foreach (XmlNode node in statistics.DocumentElement)
+            {
+                if (node.Name == DateToday)
+                {
+                    DateTodayExists = true;
+                }
+            }
+
+            if (DateTodayExists == false)
+            {
+                XmlElement DateTodayElement = statistics.CreateElement(DateToday);
+                
+                statistics.DocumentElement.AppendChild(DateTodayElement);
+            }
+
+            string TimePlayed = System.DateTime.Now.Hour.ToString() + ":" + System.DateTime.Now.Minute.ToString() + ":" + System.DateTime.Now.Second.ToString();
+            XmlElement TimePlayedElement = statistics.CreateElement("play" + (statistics.DocumentElement[DateToday].ChildNodes.Count + 1).ToString());
+            TimePlayedElement.InnerText = TimePlayed;
+
+            statistics.DocumentElement[DateToday].AppendChild(TimePlayedElement);
+            statistics.DocumentElement["LastUsed"].InnerText = DateToday + " - " + TimePlayed;
+
+            statistics.Save(StatisticsFileName);
+            SetTotalPlays(statistics);
+        }
+
+        public static void SetTotalPlays(XmlDocument currentDocument)
+        {
+            int TotalPlaysCount = 0;
+            foreach (XmlNode PlayNode in currentDocument.DocumentElement)
+            {
+                if (PlayNode.Name != "LastUsed" && PlayNode.Name != "TotalPlays")
+                {
+                    TotalPlaysCount += PlayNode.ChildNodes.Count;
+                }
+            }
+
+            currentDocument.DocumentElement["TotalPlays"].InnerText = TotalPlaysCount.ToString();
+            currentDocument.Save(StatisticsFileName);
         }
 
         public static void checkLogDir()
@@ -254,7 +415,9 @@ namespace serverApplication
                     try
                     {
                         proc[ZONE] = new Process();
-                        proc[ZONE].StartInfo.FileName = @"" + configPaths[6];
+                        //proc[ZONE].StartInfo.FileName = @"" + configPaths[6];
+                        string baseDir = AppDomain.CurrentDomain.BaseDirectory.ToString();
+                        proc[ZONE].StartInfo.FileName = baseDir + @"..\" + GameFileName;
                         proc[ZONE].EnableRaisingEvents = true;
                         proc[ZONE].Exited += new EventHandler(ZONE_HasExited);
                         proc[ZONE].Start();
@@ -262,7 +425,7 @@ namespace serverApplication
                     }
                     catch (Exception ex)
                     {
-                        logMsg("Error Opening ZONE form path: " + configPaths[6]);
+                        logMsg("Error Opening ZONE form path: " + GameFileName);
                     }
 
                     break;
@@ -275,7 +438,7 @@ namespace serverApplication
                     try
                     {
                         proc[CMS] = new Process();
-                        proc[CMS].StartInfo.FileName = @"" + configPaths[0];
+                        proc[CMS].StartInfo.FileName = @"" + VCastPath;
                         proc[CMS].EnableRaisingEvents = true;
                         proc[CMS].Exited += new EventHandler(CMS_HasExited);
                         proc[CMS].Start();
@@ -283,7 +446,7 @@ namespace serverApplication
                     }
                     catch (Exception ex)
                     {
-                        logMsg("Error Opening CMS from path: " + configPaths[0]);
+                        logMsg("Error Opening CMS from path: " + VCastPath);
                     }
 
                     break;
@@ -343,7 +506,7 @@ namespace serverApplication
                 proc[CMS].Dispose();
                 proc[CMS] = null;
                 proc[CMS] = new Process();
-                proc[CMS].StartInfo.FileName = @"" + configPaths[0];
+                proc[CMS].StartInfo.FileName = @"" + VCastPath;
                 proc[CMS].EnableRaisingEvents = true;
                 proc[CMS].Exited += new EventHandler(CMS_HasExited);
                 proc[CMS].Start();
@@ -364,7 +527,9 @@ namespace serverApplication
                 proc[ZONE].Dispose();
                 proc[ZONE] = null;
                 proc[ZONE] = new Process();
-                proc[ZONE].StartInfo.FileName = @"" + configPaths[6];
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory.ToString();
+                proc[ZONE].StartInfo.FileName = baseDir + @"..\" + GameFileName;
+                //proc[ZONE].StartInfo.FileName = @"" + GameFileName;
                 proc[ZONE].EnableRaisingEvents = true;
                 proc[ZONE].Exited += new EventHandler(ZONE_HasExited);
                 proc[ZONE].Start();
@@ -485,7 +650,7 @@ namespace serverApplication
                         {
                             try
                             {
-                                proc[SPLASH] = Process.Start(configPaths[3]);
+                                proc[SPLASH] = Process.Start(SplashScreenPath);
                                 splashShown = true;
                                 logMsg("showing splash");
                             }
@@ -542,6 +707,7 @@ namespace serverApplication
                         muteApp(ZONE, false);
                         showApp(ZONE);
                         ActiveWindow = 1;
+                        UserPlayed();
 
                         logMsg("showing ZONE");
                         break;
@@ -594,6 +760,10 @@ namespace serverApplication
                             //    logMsg(e.ToString());
                             //}
                         }
+                        break;
+
+                    case "userPlayed":
+                        UserPlayed();
                         break;
 
                     default:
