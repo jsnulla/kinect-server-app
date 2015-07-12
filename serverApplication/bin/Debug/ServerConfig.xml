@@ -25,4 +25,8 @@
     <MoveSensitivity>3</MoveSensitivity>
     <PushSensitivity>1</PushSensitivity>
   </Kinect>
+  
+  <StartUpTimer>
+    <Seconds>60</Seconds>
+  </StartUpTimer>
 </root>
