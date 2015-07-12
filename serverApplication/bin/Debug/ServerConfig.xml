@@ -20,4 +20,9 @@
     <ClassName></ClassName>
     <UseClass>False</UseClass>
   </SplashScreen>
+
+  <Kinect>
+    <MoveSensitivity>3</MoveSensitivity>
+    <PushSensitivity>1</PushSensitivity>
+  </Kinect>
 </root>

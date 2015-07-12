@@ -224,6 +224,15 @@ namespace serverApplication
                         sw.WriteLine("    <ClassName></ClassName>");
                         sw.WriteLine("    <UseClass>False</UseClass>");
                         sw.WriteLine("  </SplashScreen>");
+                        sw.WriteLine("");
+                        sw.WriteLine("  <Kinect>");
+                        sw.WriteLine("    <MoveSensitivity>3</MoveSensitivity>");
+                        sw.WriteLine("    <PushSensitivity>1</PushSensitivity>");
+                        sw.WriteLine("  </Kinect>");
+                        sw.WriteLine("");
+                        sw.WriteLine("  <StartUpTimer>");
+                        sw.WriteLine("    <Seconds>60</Seconds>");
+                        sw.WriteLine("  </StartUpTimer>");
                         sw.WriteLine("</root>");
                     }
 
