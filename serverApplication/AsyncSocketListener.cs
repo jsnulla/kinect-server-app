@@ -20,7 +20,7 @@ namespace serverApplication
         #region config variables
 
         const string StatisticsFileName = "Statistics.xml";
-        const string ConfigeFileName = "ServerConfig.xml";
+        const string ConfigFileName = "ServerConfig.xml";
 
         static string VCastPath = String.Empty;
         static string VCastWindowName = String.Empty;
@@ -191,7 +191,7 @@ namespace serverApplication
         public static bool readConfig()
         {
             logMsg("looking for config file . . .");
-            string configPath = AppDomain.CurrentDomain.BaseDirectory.ToString() + ConfigeFileName;
+            string configPath = AppDomain.CurrentDomain.BaseDirectory.ToString() + ConfigFileName;
 
             try
             {
@@ -281,7 +281,7 @@ namespace serverApplication
         public static void ReadXML()
         {
             XmlDocument config = new XmlDocument();
-            config.Load(ConfigeFileName);
+            config.Load(ConfigFileName);
 
             foreach (XmlNode parentNode in config.DocumentElement)
             {
