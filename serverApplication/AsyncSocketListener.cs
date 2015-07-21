@@ -46,6 +46,8 @@ namespace serverApplication
         public static bool cameraDisabled = false;
         const string deviceToDisable = "Kinect for Windows Camera";
 
+        static System.Threading.Timer TwoSecondTimer;
+
         public const short
         SPLASH = 0,
         CMS = 1,
@@ -223,6 +225,7 @@ namespace serverApplication
                         sw.WriteLine("    <WindowName>kinectSplash</WindowName>");
                         sw.WriteLine("    <ClassName></ClassName>");
                         sw.WriteLine("    <UseClass>False</UseClass>");
+                        sw.WriteLine("    <YOffset>25</YOffset>");
                         sw.WriteLine("  </SplashScreen>");
                         sw.WriteLine("");
                         sw.WriteLine("  <Kinect>");
@@ -327,6 +330,9 @@ namespace serverApplication
                     }
                 }
             }
+
+            config = null;
+            GC.Collect();
         }
 
         public static void UserPlayed()
@@ -412,8 +418,6 @@ namespace serverApplication
 
         public static void StartApps(short application_name)
         {
-            logMsg("Starting apps...");
-
             // Initialize Splash Screen
             proc[SPLASH] = new Process();
 
@@ -426,10 +430,12 @@ namespace serverApplication
                         proc[ZONE] = new Process();
                         //proc[ZONE].StartInfo.FileName = @"" + configPaths[6];
                         string baseDir = AppDomain.CurrentDomain.BaseDirectory.ToString();
+                        //proc[ZONE].StartInfo.FileName = baseDir + GameFileName;
                         proc[ZONE].StartInfo.FileName = baseDir + @"..\" + GameFileName;
                         proc[ZONE].EnableRaisingEvents = true;
                         proc[ZONE].Exited += new EventHandler(ZONE_HasExited);
                         proc[ZONE].Start();
+                        logMsg("Starting game.");
                         //Thread.Sleep(5000); // Delay CMS start
                     }
                     catch (Exception ex)
@@ -451,6 +457,7 @@ namespace serverApplication
                         proc[CMS].EnableRaisingEvents = true;
                         proc[CMS].Exited += new EventHandler(CMS_HasExited);
                         proc[CMS].Start();
+                        logMsg("Starting CMS.");
                         CMS_Obj.Started = true;
                     }
                     catch (Exception ex)
@@ -469,19 +476,6 @@ namespace serverApplication
             ShowWindow(handle, ShowWindowCommand.SW_MINIMIZE);
 
             appsStarted = true;
-        }
-
-
-        // Kill All Running VCast and Zone before we start the program
-        private static void Kill_All_Running_Process()
-        {
-            Process[] processlist = Process.GetProcesses();
-            foreach (Process theprocess in processlist)
-            {
-                string ProcessName = theprocess.ProcessName.ToUpper();
-                if (ProcessName.IndexOf("VCAST PLAYER V1.0") >= 0)
-                    theprocess.Kill();
-            }
         }
 
         static void KillAllVCast()
@@ -511,20 +505,22 @@ namespace serverApplication
         {
             try
             {
-                proc[CMS].Exited -= new EventHandler(CMS_HasExited);
-                proc[CMS].Dispose();
-                proc[CMS] = null;
-                proc[CMS] = new Process();
-                proc[CMS].StartInfo.FileName = @"" + VCastPath;
-                proc[CMS].EnableRaisingEvents = true;
-                proc[CMS].Exited += new EventHandler(CMS_HasExited);
-                proc[CMS].Start();
+                //proc[CMS].Exited -= new EventHandler(CMS_HasExited);
+                //proc[CMS].Dispose();
+                //proc[CMS] = null;
+                //proc[CMS] = new Process();
+                //proc[CMS].StartInfo.FileName = @"" + VCastPath;
+                //proc[CMS].EnableRaisingEvents = true;
+                //proc[CMS].Exited += new EventHandler(CMS_HasExited);
+                //proc[CMS].Start();
+                StartApps(CMS);
                 showApp(CMS);
             }
             catch (Exception ex)
             {
                 logMsg("Error RE-Opening CMS " + ex.ToString());
             }
+            CMS_Obj.Started = false;
         }
 
         // Restart ZONE in case the process exit
@@ -552,13 +548,44 @@ namespace serverApplication
 
         public static void KillApps()
         {
-            proc[CMS].CloseMainWindow(); // Kill CMS
-            proc[ZONE].CloseMainWindow(); // Kill Zone
+            try
+            {
+                if(proc[CMS].Id != null)
+                    proc[CMS].Kill(); // Kill CMS
+            }
+            catch (Exception e)
+            {
+                
+            }
+
+            try
+            {
+                if(proc[ZONE].Id != null)
+                    proc[ZONE].Kill(); // Kill Zone
+            }
+            catch (Exception e)
+            {
+               
+            }
+
+            try
+            {
+                //if (proc[SPLASH].Id != null)
+                if (proc[SPLASH].Id != null)
+                    proc[SPLASH].Kill(); // Kill Zone
+            }
+            catch (Exception e)
+            {
+                
+            }
+
             appsStarted = false;
         }
 
         public static void StartListening()
         {
+            //TwoSecondTimer = new System.Threading.Timer(TwoSecondTimerTick, null, 0, 2000);
+
             System.Reflection.Assembly assembly = System.Reflection.Assembly.GetExecutingAssembly();
             FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
 
@@ -570,6 +597,8 @@ namespace serverApplication
                 // Keep reading config file
             }
             AsyncSocketListener.StartApps(ZONE);
+            //AsyncSocketListener.StartApps(CMS);
+            //AsyncSocketListener.StartApps(SPLASH);
 
             // Hide Taskbar
             ShowWindow(FindWindow("Shell_TrayWnd", ""), ShowWindowCommand.SW_HIDE);
@@ -677,8 +706,9 @@ namespace serverApplication
                         {
                             try
                             {
-                                proc[SPLASH].Kill();
-                                splashShown = false;
+                                KillAllSplashScreens();
+                                //proc[SPLASH].Kill();
+                                //splashShown = false;
                                 logMsg("killing splash");
                             }
                             catch (Exception e)
@@ -698,19 +728,25 @@ namespace serverApplication
                         break;
 
                     case "showCMS":
-                        if (!CMS_Obj.Started)
+                        //if (!CMS_Obj.Started)
+                        //{
+                        //    StartApps(CMS);
+                        //    break;
+                        //}
+                        try
                         {
-                            StartApps(CMS);
-                            break;
+                            ActiveWindow = 0;
+                            muteApp(CMS, false);
+                            muteApp(ZONE, true);
+                            showApp(CMS);
+                            logMsg("showing CMS");
                         }
-
-                        ActiveWindow = 0;
-                        muteApp(CMS, false);
-                        muteApp(ZONE, true);
-                        showApp(CMS);
-                        logMsg("showing CMS");
+                        catch (Exception e)
+                        {
+                            // asdasf
+                        }
                         break;
-
+                         
                     case "showZone":
                         muteApp(CMS, true);
                         muteApp(ZONE, false);
@@ -735,7 +771,7 @@ namespace serverApplication
                     case "killApps": // Unity test
                         if (appsStarted == true)
                         {
-                            AsyncSocketListener.KillApps();
+                            //AsyncSocketListener.KillApps();
                         }
                         break;
 
@@ -815,7 +851,7 @@ namespace serverApplication
 
         public static void muteApp(int procNum, bool _muteApp)
         {
-            int volume = 90;
+            int volume = 100;
             switch (procNum)
             {
                 case CMS:
@@ -856,6 +892,7 @@ namespace serverApplication
                         // Show CMS window
                         SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                         ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
+                        Thread.Sleep(250);
 
                         handle = proc[ZONE].MainWindowHandle;
                         SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
@@ -869,11 +906,13 @@ namespace serverApplication
                         // Show Game window
                         SetWindowPos(handle, (IntPtr)HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                         ShowWindow(handle, ShowWindowCommand.SW_SHOWMAXIMIZED);
+                        Thread.Sleep(250);
 
                         handle = proc[CMS].MainWindowHandle;
                         SetWindowPos(handle, (IntPtr)HWND_NOTTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                         SetWindowPos(handle, (IntPtr)HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
 
+                        Thread.Sleep(250);
                         MoveMousePointerOutofBound(UPPER_RIGHT);
                         break;
                 }
@@ -908,6 +947,50 @@ namespace serverApplication
                 Cursor.Position = new Point(0, 0);
             else if (screenPosition == UPPER_RIGHT)
                 Cursor.Position = new Point(Screen.PrimaryScreen.WorkingArea.Width, 0);
+        }
+
+        private static void TwoSecondTimerTick(object state)
+        {
+            try
+            {
+                if (proc[CMS].Id != 0 || CMS_Obj.Started == false)
+                {
+                    /* This block is used to check if
+                     * the CMS / NyxSys player is on
+                     **/
+                }
+            }
+            catch (Exception e)
+            {
+                logMsg("Waiting for player to start...");
+
+                CMS_Obj.Started = false;
+                Process[] ProcessList = Process.GetProcesses();
+                foreach (Process pListItem in ProcessList)
+                {
+                    if (pListItem.ProcessName.ToLower().IndexOf("vcast") >= 0)
+                    {
+                        proc[CMS] = pListItem;
+                        proc[CMS].EnableRaisingEvents = true;
+                        proc[CMS].Exited += new EventHandler(CMS_HasExited);
+                        CMS_Obj.Started = true;
+                    }
+                }
+            }
+            //throw new NotImplementedException();
+        }
+
+        private static void KillAllSplashScreens()
+        {
+            Process[] ProcessList = Process.GetProcesses();
+            foreach (Process pListItem in ProcessList)
+            {
+                if (pListItem.ProcessName.ToLower().IndexOf("kinect-splash") >= 0)
+                {
+                    pListItem.Kill();
+                    splashShown = false;
+                }
+            }
         }
     }
 }

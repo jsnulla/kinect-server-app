@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <root>
   <VCast>
     <Path>C:\Program Files (x86)\Nyxsys Philippines Inc\EAC VCast Player\VCast Player v1.0.exe</Path>
@@ -8,7 +8,7 @@
   </VCast>
 
   <Game>
-    <FileName>CoC_Zone.exe</FileName>
+    <FileName>Startup Timer.exe</FileName>
     <WindowName>CoC_Zone</WindowName>
     <ClassName></ClassName>
     <UseClass>True</UseClass>
@@ -19,14 +19,15 @@
     <WindowName>kinectSplash</WindowName>
     <ClassName></ClassName>
     <UseClass>False</UseClass>
+    <YOffset>25</YOffset>
   </SplashScreen>
 
   <Kinect>
     <MoveSensitivity>3</MoveSensitivity>
     <PushSensitivity>1</PushSensitivity>
   </Kinect>
-  
+
   <StartUpTimer>
-    <Seconds>60</Seconds>
+    <Seconds>3600</Seconds>
   </StartUpTimer>
 </root>

@@ -19,6 +19,7 @@
     <WindowName>kinectSplash</WindowName>
     <ClassName></ClassName>
     <UseClass>False</UseClass>
+    <YOffset>25</YOffset>
   </SplashScreen>
 
   <Kinect>

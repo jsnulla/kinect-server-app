@@ -75,9 +75,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon_aXG_icon.ico" />
-    <Content Include="ServerConfig.xml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+    <Content Include="ServerConfig.xml" />
     <Content Include="Statistics.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

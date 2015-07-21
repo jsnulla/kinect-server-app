@@ -47,8 +47,9 @@ namespace serverApplication
             SetConsoleCtrlHandler(new HandlerRoutine(ConsoleCtrlCheck), true);
             AsyncSocketListener.MoveMousePointerOutofBound(AsyncSocketListener.UPPER_RIGHT);
             System.Threading.Timer _timer = new System.Threading.Timer(TimerCallback, null, 0, 1000);
-            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+            AppDomain.CurrentDomain.ProcessExit += new EventHandler(OnProcessExit);
             AsyncSocketListener.StartListening(); // Start Aynchronous Listener
+
             return 0;
         }
 
@@ -131,7 +132,7 @@ namespace serverApplication
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                
             }
 
             try
@@ -140,7 +141,7 @@ namespace serverApplication
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                
             }
 
             try
@@ -150,9 +151,17 @@ namespace serverApplication
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                
             }
 
+            try
+            {
+                AsyncSocketListener.KillApps();
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show(e.ToString());
+            }
         }
 
         static void OnProcessExit(object sender, EventArgs e)
